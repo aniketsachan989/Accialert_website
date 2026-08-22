@@ -3,6 +3,7 @@
 import { useState } from "react";
 import CinematicCrashStory from "./CinematicCrashStory";
 import CinematicHomeStory from "./CinematicHomeStory";
+import MobileSimulationExperience from "./MobileSimulationExperience";
 import { Radio, Car, Home, Sparkles } from "lucide-react";
 
 export default function CrashSimulator() {
@@ -29,10 +30,10 @@ export default function CrashSimulator() {
           </p>
 
           {/* Interactive Scenario Switcher Tabs */}
-          <div className="w-full max-w-lg mx-auto grid grid-cols-1 sm:grid-cols-2 p-1.5 rounded-2xl bg-[#111827] border-2 border-slate-800 mt-8 gap-2 shadow-2xl">
+          <div className="w-full max-w-lg mx-auto grid grid-cols-2 p-1.5 rounded-2xl bg-[#111827] border-2 border-slate-800 mt-8 gap-2 shadow-2xl">
             <button
               onClick={() => setActiveScenario("road")}
-              className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+              className={`flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                 activeScenario === "road"
                   ? "bg-red-600 text-white shadow-xl shadow-red-950/60 scale-[1.01]"
                   : "text-slate-400 hover:text-white hover:bg-slate-800/50"
@@ -44,7 +45,7 @@ export default function CrashSimulator() {
 
             <button
               onClick={() => setActiveScenario("home")}
-              className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+              className={`flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                 activeScenario === "home"
                   ? "bg-amber-600 text-white shadow-xl shadow-amber-950/60 scale-[1.01]"
                   : "text-slate-400 hover:text-white hover:bg-slate-800/50"
@@ -56,13 +57,21 @@ export default function CrashSimulator() {
           </div>
         </div>
 
-        {/* Dynamic Story Animation Container */}
-        <div className="transition-all duration-300">
+        {/* 1. Desktop & Tablet Panoramic Experience (Widescreen >= 768px) */}
+        <div className="hidden md:block transition-all duration-300">
           {activeScenario === "road" ? (
-            <CinematicCrashStory key="road-scenario" />
+            <CinematicCrashStory key="road-scenario-desktop" />
           ) : (
-            <CinematicHomeStory key="home-scenario" />
+            <CinematicHomeStory key="home-scenario-desktop" />
           )}
+        </div>
+
+        {/* 2. Mobile-Native Vertical Experience (< 768px) */}
+        <div className="block md:hidden transition-all duration-300">
+          <MobileSimulationExperience
+            key={`mobile-${activeScenario}`}
+            scenario={activeScenario}
+          />
         </div>
       </div>
     </section>
