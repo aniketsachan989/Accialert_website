@@ -29,19 +29,19 @@ export default function BloodBankFeatureSection() {
   ];
 
   return (
-    <section className="py-20 lg:py-28 bg-[#090d16] border-t border-slate-800/80 relative overflow-hidden">
+    <section className="py-20 lg:py-28 bg-[#090d16] border-t border-slate-800/80 relative overflow-hidden w-full max-w-full">
       {/* Background ambient lighting */}
       <div className="absolute top-1/2 left-0 w-96 h-96 bg-red-600/15 rounded-full blur-[140px] pointer-events-none" />
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-rose-600/15 rounded-full blur-[140px] pointer-events-none" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 relative w-full">
         {/* Section Pill & Header */}
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-950/70 border border-red-700/60 text-xs font-bold text-red-400 mb-4 shadow-lg shadow-red-950/50">
-            <Droplet className="w-4 h-4 fill-red-400 animate-bounce" />
-            <span>CRITICAL LIFELINE • 15 KM BLOOD BANK NETWORK</span>
+        <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
+          <div className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-1.5 rounded-full bg-red-950/70 border border-red-700/60 text-xs font-bold text-red-400 mb-4 shadow-lg shadow-red-950/50 max-w-full">
+            <Droplet className="w-4 h-4 fill-red-400 animate-bounce shrink-0" />
+            <span className="truncate">CRITICAL LIFELINE • 15 KM BLOOD BANK NETWORK</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">
+          <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">
             Saving the Golden Hour with Instant Blood Mobilization
           </h2>
           <p className="mt-4 text-base sm:text-lg text-slate-300 leading-relaxed">

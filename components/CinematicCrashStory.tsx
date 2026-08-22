@@ -309,19 +309,19 @@ export default function CinematicCrashStory() {
             />
           </div>
           {/* Milestone timeline labels */}
-          <div className="flex justify-between text-[10px] font-mono text-slate-400 mt-1.5 px-0.5">
+          <div className="flex justify-between text-[8px] sm:text-[10px] font-mono text-slate-400 mt-1.5 px-0.5">
             <span>0s: Impact</span>
-            <span>3s: 10s Timer</span>
-            <span>10s: Priority Call</span>
-            <span>14s: 3x SMS</span>
-            <span>17s: Blood Reserve</span>
+            <span>3s: Timer</span>
+            <span>10s: Call</span>
+            <span>14s: SMS</span>
+            <span className="hidden xs:inline">17s: Blood</span>
             <span>22s: Done</span>
           </div>
         </div>
       </div>
 
       {/* 2. REALISTIC SMOOTH MAP CANVAS */}
-      <div className="relative w-full aspect-[16/10] sm:aspect-[16/9] min-h-[460px] bg-[#070b14] rounded-3xl overflow-hidden border-2 border-slate-800 shadow-2xl">
+      <div className="relative w-full aspect-[16/11] sm:aspect-[16/9] min-h-[340px] sm:min-h-[460px] bg-[#070b14] rounded-2xl sm:rounded-3xl overflow-hidden border-2 border-slate-800 shadow-2xl">
         {/* Dynamic Zoom Container */}
         <div
           className="absolute inset-0 transition-transform duration-700 ease-out"

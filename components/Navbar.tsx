@@ -40,11 +40,11 @@ export default function Navbar() {
   ];
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-[#0B0F19]/90 backdrop-blur-md border-b border-slate-800/80">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-[#0B0F19]/95 backdrop-blur-md border-b border-slate-800/80 w-full max-w-full">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between w-full">
         {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-3 group">
-          <div className="relative flex items-center justify-center w-11 h-11 rounded-xl bg-black border border-slate-700 shadow-lg shadow-red-950/40 p-1.5 group-hover:scale-105 transition-transform duration-300 overflow-hidden">
+        <Link href="/" className="flex items-center gap-2 sm:gap-3 group shrink-0">
+          <div className="relative flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-black border border-slate-700 shadow-lg shadow-red-950/40 p-1 sm:p-1.5 group-hover:scale-105 transition-transform duration-300 overflow-hidden shrink-0">
             <Image
               src="/logo.png"
               alt="AcciAlert Logo"
@@ -53,21 +53,21 @@ export default function Navbar() {
               className="w-full h-full object-contain"
               priority
             />
-            <span className="absolute -top-1 -right-1 flex h-3 w-3">
+            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 sm:h-3 sm:w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border border-[#0B0F19]"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 sm:h-3 sm:w-3 bg-red-500 border border-[#0B0F19]"></span>
             </span>
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xl font-extrabold tracking-tight text-white font-mono">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="text-base sm:text-xl font-extrabold tracking-tight text-white font-mono">
                 ACCI<span className="text-red-500">ALERT</span>
               </span>
-              <span className="text-[10px] uppercase font-bold tracking-widest bg-gradient-to-r from-red-600 to-rose-600 text-white px-2 py-0.5 rounded shadow-sm shadow-red-950">
+              <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-widest bg-gradient-to-r from-red-600 to-rose-600 text-white px-1.5 sm:px-2 py-0.5 rounded shadow-sm shadow-red-950">
                 v5.0 Pro
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 -mt-0.5 hidden sm:block">
+            <p className="text-[10px] sm:text-[11px] text-slate-400 -mt-0.5 hidden md:block">
               Emergency Response Ecosystem
             </p>
           </div>
@@ -110,14 +110,14 @@ export default function Navbar() {
           })}
         </nav>
 
-        {/* Action CTAs */}
-        <div className="hidden sm:flex items-center gap-3">
+        {/* Action CTAs Desktop */}
+        <div className="hidden sm:flex items-center gap-2.5">
           {/* HIGH-WEIGHTAGE PROMINENT BLOOD BANK REGISTRATION BUTTON */}
           <Link
             href="/blood-banks/register"
-            className="relative inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider text-white bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 border border-red-400/50 shadow-lg shadow-red-950/60 transition-all hover:scale-105 active:scale-95"
+            className="relative inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold uppercase tracking-wider text-white bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 border border-red-400/50 shadow-lg shadow-red-950/60 transition-all hover:scale-105 active:scale-95 shrink-0"
           >
-            <Droplet className="w-4 h-4 fill-white animate-bounce" />
+            <Droplet className="w-3.5 h-3.5 fill-white animate-bounce" />
             <span>Register Blood Bank</span>
           </Link>
 
@@ -125,7 +125,7 @@ export default function Navbar() {
             href={PLAY_STORE_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 shadow-md shadow-emerald-950/50 border border-emerald-500/40 transition-all hover:scale-[1.02] active:scale-[0.98] group"
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 shadow-md shadow-emerald-950/50 border border-emerald-500/40 transition-all hover:scale-[1.02] active:scale-[0.98] group shrink-0"
           >
             <GooglePlayIcon className="w-3.5 h-3.5 text-white group-hover:scale-110 transition-transform" />
             <span>Play Store</span>
@@ -133,23 +133,23 @@ export default function Navbar() {
           </a>
         </div>
 
-        {/* Mobile Hamburger Button */}
-        <div className="lg:hidden flex items-center gap-2">
+        {/* Mobile Hamburger & Play Button */}
+        <div className="lg:hidden flex items-center gap-2 shrink-0">
           <a
             href={PLAY_STORE_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="p-2 rounded-lg bg-emerald-600 text-white sm:hidden"
+            className="p-2 rounded-xl bg-emerald-600 text-white shadow-md flex items-center justify-center"
             aria-label="Get on Google Play"
           >
             <GooglePlayIcon className="w-4 h-4" />
           </a>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors focus:outline-none"
+            className="p-2 rounded-xl text-slate-300 hover:text-white bg-slate-900 border border-slate-800 transition-colors focus:outline-none flex items-center justify-center"
             aria-label="Toggle Navigation Menu"
           >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
       </div>
