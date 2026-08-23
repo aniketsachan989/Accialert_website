@@ -138,13 +138,14 @@ export default function HeroSection() {
           </div>
 
           {/* Right Column: Interactive Smartphone Mockup with 20-Sec Lock Screen Medical ID Overlay */}
-          <div className="lg:col-span-5 flex items-center justify-center w-full max-w-full overflow-hidden">
+          <div className="lg:col-span-5 flex items-center justify-center w-full max-w-full">
             <div className="relative w-full max-w-[320px] sm:max-w-[380px]">
-              {/* Pulsing Emergency Glow behind Phone */}
-              <div className="absolute -inset-4 bg-gradient-to-r from-red-600/30 via-red-500/20 to-amber-500/30 rounded-[48px] blur-2xl animate-siren-glow pointer-events-none" />
+              {/* Soft, Seamless Radial Emergency Aura behind Phone */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[130%] h-[120%] bg-red-600/20 rounded-full blur-[100px] pointer-events-none -z-10 animate-pulse-slow" />
+              <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-rose-500/15 rounded-full blur-[80px] pointer-events-none -z-10" />
 
               {/* Phone Outer Chassis */}
-              <div className="relative bg-[#161f30] border-4 border-slate-700/80 rounded-[44px] p-3 shadow-2xl glow-card">
+              <div className="relative bg-[#161f30] border-4 border-slate-700/80 rounded-[44px] p-3 shadow-2xl">
                 {/* Speaker ear piece & camera notch */}
                 <div className="absolute top-6 left-1/2 -translate-x-1/2 w-28 h-5 bg-[#0B0F19] rounded-full flex items-center justify-center gap-2 z-30 border border-slate-800">
                   <div className="w-3 h-3 rounded-full bg-slate-950 border border-slate-800 flex items-center justify-center">

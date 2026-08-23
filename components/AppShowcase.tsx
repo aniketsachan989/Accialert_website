@@ -121,13 +121,13 @@ export default function AppShowcase() {
             <div className="relative w-full max-w-[310px] sm:max-w-[340px]">
               {/* Pulsing ambient backdrop glow */}
               <div
-                className={`absolute -inset-4 rounded-[48px] blur-2xl opacity-60 transition-colors duration-500 pointer-events-none ${
-                  activeTab === "home" ? "bg-emerald-500/20" : "bg-red-500/20"
+                className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[130%] h-[115%] rounded-full blur-[90px] opacity-60 transition-colors duration-500 pointer-events-none -z-10 ${
+                  activeTab === "home" ? "bg-emerald-500/25" : "bg-red-500/25"
                 }`}
               />
 
               {/* Smartphone Chassis Frame */}
-              <div className="relative bg-[#161f30] border-4 border-slate-700/80 rounded-[44px] p-2.5 shadow-2xl glow-card">
+              <div className="relative bg-[#161f30] border-4 border-slate-700/80 rounded-[44px] p-2.5 shadow-2xl">
                 {/* Notch */}
                 <div className="absolute top-5 left-1/2 -translate-x-1/2 w-24 h-4 bg-[#0B0F19] rounded-full flex items-center justify-center gap-2 z-30 border border-slate-800">
                   <div className="w-2.5 h-2.5 rounded-full bg-slate-950 border border-slate-800"></div>
