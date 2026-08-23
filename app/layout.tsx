@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     "TensorFlow Lite Safety",
     "First Responder Dispatch",
   ],
-  authors: [{ name: "AcciAlert Safety Systems" }],
+  authors: [{ name: "Aniket DevStudio" }],
 };
 
 export default function RootLayout({

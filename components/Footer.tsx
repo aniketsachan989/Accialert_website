@@ -140,7 +140,7 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-slate-400 text-[11px]">
           <div>
-            © {new Date().getFullYear()} AcciAlert Emergency Response Platform. All rights reserved.
+            © {new Date().getFullYear()} Aniket DevStudio. All rights reserved.
           </div>
           <div className="flex items-center gap-4">
             <span className="text-slate-400">Android Open Source Safety Protocol</span>
