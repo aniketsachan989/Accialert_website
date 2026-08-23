@@ -4,6 +4,7 @@ import AppShowcase from "@/components/AppShowcase";
 import BloodBankFeatureSection from "@/components/BloodBankFeatureSection";
 import ArchitectureGrid from "@/components/ArchitectureGrid";
 import PrivacyReliability from "@/components/PrivacyReliability";
+import TeamSection from "@/components/TeamSection";
 import Link from "next/link";
 import { Droplet, FileSpreadsheet, ShieldAlert, ArrowRight, Radio, HeartPulse, CheckCircle2 } from "lucide-react";
 
@@ -103,6 +104,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* 8. The Team Behind AcciAlert */}
+      <TeamSection />
     </div>
   );
 }
