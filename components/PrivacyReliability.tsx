@@ -93,7 +93,7 @@ export default function PrivacyReliability() {
 
             <div className="mt-8 pt-6 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
               <span>Encrypted on Device</span>
-              <span className="font-mono text-emerald-400 font-semibold">ISO 27001 & HIPAA Compliant</span>
+              <span className="font-mono text-emerald-400 font-semibold">AES-256 encrypted local storage</span>
             </div>
           </div>
 

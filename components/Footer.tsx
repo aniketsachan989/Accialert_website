@@ -109,6 +109,11 @@ export default function Footer() {
                   <FileSpreadsheet className="w-3.5 h-3.5 text-cyan-400" /> Digital Blackbox Portal
                 </Link>
               </li>
+              <li>
+                <Link href="/admin/blood-banks" className="hover:text-white transition-colors flex items-center gap-1.5 text-slate-500 hover:text-slate-400 text-[11px]">
+                  <span>• License Admin Review</span>
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -125,9 +130,8 @@ export default function Footer() {
                 Dial National Emergency Numbers:
               </div>
               <div className="font-mono text-xs font-black text-white flex items-center gap-2 pt-0.5">
-                <span className="bg-red-900/80 px-2 py-0.5 rounded border border-red-700">112</span>
-                <span className="bg-red-900/80 px-2 py-0.5 rounded border border-red-700">911</span>
-                <span className="bg-red-900/80 px-2 py-0.5 rounded border border-red-700">108</span>
+                <span className="bg-red-900/80 px-2 py-0.5 rounded border border-red-700">112 (Emergency)</span>
+                <span className="bg-red-900/80 px-2 py-0.5 rounded border border-red-700">108 (Ambulance)</span>
               </div>
             </div>
           </div>
@@ -141,7 +145,7 @@ export default function Footer() {
           <div className="flex items-center gap-4">
             <span className="text-slate-400">Android Open Source Safety Protocol</span>
             <span>•</span>
-            <span className="text-slate-400">Certified for First Responder Interoperability</span>
+            <span className="text-slate-400">Built for first-responder workflows</span>
           </div>
         </div>
       </div>

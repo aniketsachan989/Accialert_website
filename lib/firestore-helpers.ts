@@ -18,10 +18,13 @@ import {
   IncidentDocument,
   AccidentDocument,
   BloodBankDocument,
+  BloodBankStatus,
+  ReportDocument,
+  AccessLogDocument,
 } from "@/types";
 
 /**
- * Verified sample data for demo/fallback verification testing in Blackbox and Blood Bank portals
+ * Verified sample users for demonstration & fallback testing
  */
 export const SAMPLE_USERS: UserDocument[] = [
   {
@@ -162,118 +165,202 @@ export const SAMPLE_INCIDENTS: Record<string, IncidentDocument> = {
 };
 
 /**
- * Searches Firestore for user matching profile name, bloodGroup, and primary contact phone
+ * Verified sample reports mapped to unguessable Report IDs
  */
-export async function searchBlackboxUser(
-  name: string,
-  bloodGroup: string,
-  phone: string
-): Promise<{ user: UserDocument | null; incident: IncidentDocument | null; source: "firestore" | "sample" | "none" }> {
-  const cleanName = name.trim().toLowerCase();
-  const cleanPhone = phone.replace(/[^0-9+]/g, "");
+export const SAMPLE_REPORTS: Record<
+  string,
+  { user: UserDocument; incident: IncidentDocument; reportId: string }
+> = {
+  "REP-2026-0884": {
+    reportId: "REP-2026-0884",
+    user: SAMPLE_USERS[1], // Rahul Sharma
+    incident: SAMPLE_INCIDENTS["demo-user-1"],
+  },
+  "REP-2026-0992": {
+    reportId: "REP-2026-0992",
+    user: SAMPLE_USERS[0], // Aniket Sachan
+    incident: SAMPLE_INCIDENTS["user-aniket-sachan"],
+  },
+  "REP-2026-0712": {
+    reportId: "REP-2026-0712",
+    user: SAMPLE_USERS[2], // Priya Patel
+    incident: SAMPLE_INCIDENTS["demo-user-2"],
+  },
+  "REP-2026-0931": {
+    reportId: "REP-2026-0931",
+    user: SAMPLE_USERS[3], // Amitav Roy
+    incident: SAMPLE_INCIDENTS["demo-user-3"],
+  },
+};
 
+/**
+ * Logs report access to /accessLogs collection for accountability & audit trail
+ */
+export async function logReportAccess(
+  reportId: string,
+  institutionId: string,
+  institutionName?: string
+) {
   try {
-    const usersRef = collection(db, "users");
-    const snapshot = await getDocs(usersRef);
-
-    for (const docSnap of snapshot.docs) {
-      const data = docSnap.data() as UserDocument;
-      const userName = (data.profile?.name || "").trim().toLowerCase();
-      const userBg = (data.profile?.bloodGroup || "").trim();
-      const userPhone = (data.primaryContact?.phone || "").replace(/[^0-9+]/g, "");
-
-      if (
-        userName === cleanName &&
-        userBg.toUpperCase() === bloodGroup.trim().toUpperCase() &&
-        (userPhone.includes(cleanPhone) || cleanPhone.includes(userPhone))
-      ) {
-        const userId = docSnap.id;
-        const matchedUser: UserDocument = { id: userId, ...data };
-
-        // Fetch latest incident from sub-collection /users/{userId}/incidents
-        let latestIncident: IncidentDocument | null = null;
-        try {
-          const incRef = collection(db, "users", userId, "incidents");
-          const incSnap = await getDocs(query(incRef, limit(1)));
-          if (!incSnap.empty) {
-            latestIncident = {
-              id: incSnap.docs[0].id,
-              ...(incSnap.docs[0].data() as IncidentDocument),
-            };
-          }
-        } catch (e) {
-          console.warn("Could not fetch sub-collection incidents:", e);
-        }
-
-        // If no subcollection incident, try to match /accidents collection
-        if (!latestIncident) {
-          try {
-            const accRef = collection(db, "accidents");
-            const accSnap = await getDocs(query(accRef, where("userId", "==", userId), limit(1)));
-            if (!accSnap.empty) {
-              const accData = accSnap.docs[0].data() as AccidentDocument;
-              latestIncident = {
-                id: accSnap.docs[0].id,
-                timestamp: accData.createdAt || new Date().toISOString(),
-                speedKmh: accData.speedKmh,
-                gForce: accData.gForce,
-                weather: { condition: accData.weatherCondition || "Clear", temp: 26 },
-                location: accData.location,
-                rolloverDetected: true,
-                powerRipDetected: true,
-                status: accData.status || "ACTIVE",
-              };
-            }
-          } catch (e) {
-            console.warn("Could not fetch accidents:", e);
-          }
-        }
-
-        return { user: matchedUser, incident: latestIncident, source: "firestore" };
-      }
-    }
+    const logData: Omit<AccessLogDocument, "id"> = {
+      reportId,
+      institutionId,
+      institutionName: institutionName || "Institutional Authority",
+      timestamp: serverTimestamp(),
+      ipOrUserAgent:
+        typeof navigator !== "undefined" ? navigator.userAgent : "Node/Server",
+    };
+    await addDoc(collection(db, "accessLogs"), logData);
   } catch (err) {
-    console.warn("Firestore query encountered error or permission limitation, falling back to local verification:", err);
+    console.warn("Could not write audit log to /accessLogs:", err);
+  }
+}
+
+/**
+ * Retrieves a Digital Blackbox Report strictly using a Report ID (Fix 3)
+ */
+export async function getBlackboxReportById(
+  reportId: string,
+  institutionId = "INST-VERIFIED-AUTH",
+  institutionName = "Traffic Police & Emergency Trauma Assessor"
+): Promise<{
+  user: UserDocument | null;
+  incident: IncidentDocument | null;
+  reportId: string;
+  source: "firestore" | "sample" | "none";
+}> {
+  const cleanId = reportId.trim().toUpperCase();
+
+  if (!cleanId) {
+    return { user: null, incident: null, reportId: "", source: "none" };
   }
 
-  // Fallback to sample data matching
-  const sampleMatch = SAMPLE_USERS.find((u) => {
-    const sName = u.profile.name.toLowerCase();
-    const sBg = u.profile.bloodGroup.toUpperCase();
-    const sPhone = u.primaryContact.phone.replace(/[^0-9+]/g, "");
-    return (
-      (sName.includes(cleanName) || cleanName.includes(sName)) &&
-      sBg === bloodGroup.trim().toUpperCase() &&
-      (sPhone.includes(cleanPhone) || cleanPhone.includes(sPhone))
-    );
-  });
+  // 1. Try Firestore direct get on /reports/{reportId}
+  try {
+    const reportRef = doc(db, "reports", cleanId);
+    const snap = await getDoc(reportRef);
 
-  if (sampleMatch && sampleMatch.id) {
+    if (snap.exists()) {
+      const data = snap.data() as ReportDocument;
+      await logReportAccess(cleanId, institutionId, institutionName);
+      return {
+        user: data.user,
+        incident: data.incident,
+        reportId: cleanId,
+        source: "firestore",
+      };
+    }
+  } catch (err) {
+    console.warn("Firestore direct get on /reports error:", err);
+  }
+
+  // 2. Fallback check for sample report IDs
+  const sampleMatch = SAMPLE_REPORTS[cleanId];
+  if (sampleMatch) {
+    await logReportAccess(cleanId, institutionId, institutionName);
     return {
-      user: sampleMatch,
-      incident: SAMPLE_INCIDENTS[sampleMatch.id] || null,
+      user: sampleMatch.user,
+      incident: sampleMatch.incident,
+      reportId: cleanId,
       source: "sample",
     };
   }
 
-  return { user: null, incident: null, source: "none" };
+  return { user: null, incident: null, reportId: cleanId, source: "none" };
 }
 
 /**
- * Submits a new blood bank registration to Firestore
+ * Registers a blood bank in Firestore `bloodBanks/{uid}` with `status: "pending"` (Fix 2)
  */
-export async function registerBloodBank(data: Omit<BloodBankDocument, "createdAt" | "isVerified">) {
+export async function registerBloodBankDoc(
+  uid: string,
+  data: Omit<BloodBankDocument, "createdAt" | "status" | "uid">
+) {
   try {
     const bankDoc: BloodBankDocument = {
       ...data,
-      isVerified: true,
+      uid,
+      status: "pending", // ALWAYS pending on registration
+      isVerified: false,
       createdAt: serverTimestamp(),
     };
-    const ref = await addDoc(collection(db, "blood_banks"), bankDoc);
-    return { success: true, id: ref.id };
+    await setDoc(doc(db, "bloodBanks", uid), bankDoc);
+    return { success: true, uid };
   } catch (err: any) {
     console.error("Failed to write blood bank:", err);
     return { success: false, error: err.message || "Failed to register" };
+  }
+}
+
+/**
+ * Legacy wrapper for registration
+ */
+export async function registerBloodBank(
+  data: Omit<BloodBankDocument, "createdAt" | "status" | "uid">,
+  uid?: string
+) {
+  const targetUid = uid || `bank_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  return registerBloodBankDoc(targetUid, data);
+}
+
+/**
+ * Fetches blood bank profile document from Firestore `bloodBanks/{uid}`
+ */
+export async function getBloodBankProfile(uid: string): Promise<BloodBankDocument | null> {
+  try {
+    const bankRef = doc(db, "bloodBanks", uid);
+    const snap = await getDoc(bankRef);
+    if (snap.exists()) {
+      return { id: snap.id, ...(snap.data() as BloodBankDocument) };
+    }
+  } catch (err) {
+    console.warn("Error fetching blood bank profile:", err);
+  }
+  return null;
+}
+
+/**
+ * Admin: Updates blood bank verification status (approved / rejected)
+ */
+export async function updateBloodBankStatus(
+  bankId: string,
+  status: BloodBankStatus,
+  rejectionReason?: string
+) {
+  try {
+    const bankRef = doc(db, "bloodBanks", bankId);
+    const updateData: any = {
+      status,
+      isVerified: status === "approved",
+    };
+    if (status === "approved") {
+      updateData.approvedAt = serverTimestamp();
+    } else if (status === "rejected") {
+      updateData.rejectedAt = serverTimestamp();
+      if (rejectionReason) updateData.rejectionReason = rejectionReason;
+    }
+    await setDoc(bankRef, updateData, { merge: true });
+    return { success: true };
+  } catch (err: any) {
+    console.error("Failed to update status:", err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Admin: Fetches all registered blood banks
+ */
+export async function getAllBloodBanks(): Promise<BloodBankDocument[]> {
+  try {
+    const snap = await getDocs(collection(db, "bloodBanks"));
+    const list: BloodBankDocument[] = [];
+    snap.forEach((d) => {
+      list.push({ id: d.id, ...(d.data() as BloodBankDocument) });
+    });
+    return list;
+  } catch (err) {
+    console.warn("Error getting all blood banks:", err);
+    return [];
   }
 }
 

@@ -12,12 +12,18 @@ import {
   FileCheck,
   Phone,
   Mail,
+  Lock,
   Navigation,
   ArrowLeft,
   Loader2,
   ShieldCheck,
+  Clock,
+  KeyRound,
+  ShieldAlert,
 } from "lucide-react";
-import { registerBloodBank } from "@/lib/firestore-helpers";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { registerBloodBankDoc } from "@/lib/firestore-helpers";
 import { playAlertSound } from "@/lib/utils";
 
 const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
@@ -27,8 +33,10 @@ export default function RegisterBloodBankPage() {
   const [formData, setFormData] = useState({
     name: "",
     licenseNo: "",
-    phone: "",
     email: "",
+    password: "",
+    confirmPassword: "",
+    phone: "",
     address: "",
     lat: 28.6139,
     lng: 77.209,
@@ -38,6 +46,7 @@ export default function RegisterBloodBankPage() {
   const [loadingGps, setLoadingGps] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
   const handleToggleGroup = (group: string) => {
@@ -87,8 +96,25 @@ export default function RegisterBloodBankPage() {
     e.preventDefault();
     setErrorMsg("");
 
-    if (!formData.name || !formData.licenseNo || !formData.phone || !formData.address) {
+    if (
+      !formData.name ||
+      !formData.licenseNo ||
+      !formData.email ||
+      !formData.password ||
+      !formData.phone ||
+      !formData.address
+    ) {
       setErrorMsg("Please complete all required fields.");
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      setErrorMsg("Password must be at least 6 characters long for institutional security.");
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setErrorMsg("Passwords do not match. Please re-enter your password.");
       return;
     }
 
@@ -99,26 +125,46 @@ export default function RegisterBloodBankPage() {
 
     setSubmitting(true);
     try {
-      const res = await registerBloodBank({
-        name: formData.name,
-        licenseNo: formData.licenseNo,
-        phone: formData.phone,
-        email: formData.email,
-        address: formData.address,
+      // 1. Create Firebase Auth user account
+      let userUid = "";
+      try {
+        const userCred = await createUserWithEmailAndPassword(
+          auth,
+          formData.email.trim(),
+          formData.password
+        );
+        userUid = userCred.user.uid;
+      } catch (authErr: any) {
+        // If email already exists or auth fails
+        if (authErr.code === "auth/email-already-in-use") {
+          throw new Error("This email is already registered. Please login to your existing account.");
+        }
+        throw new Error(authErr.message || "Failed to create institutional authentication user.");
+      }
+
+      // 2. Write document to Firestore `bloodBanks/{uid}` with `status: "pending"`
+      const res = await registerBloodBankDoc(userUid, {
+        name: formData.name.trim(),
+        licenseNo: formData.licenseNo.trim(),
+        phone: formData.phone.trim(),
+        email: formData.email.trim(),
+        address: formData.address.trim(),
         lat: Number(formData.lat),
         lng: Number(formData.lng),
         supportedGroups: formData.supportedGroups,
       });
 
       if (res.success) {
+        setRegisteredEmail(formData.email);
         setSuccess(true);
         playAlertSound("success");
       } else {
-        setErrorMsg(res.error || "Failed to register blood bank.");
+        setErrorMsg(res.error || "Failed to register blood bank in Firestore.");
       }
     } catch (err: any) {
       console.error(err);
       setErrorMsg(err.message || "An unexpected error occurred.");
+      playAlertSound("beep");
     } finally {
       setSubmitting(false);
     }
@@ -147,43 +193,72 @@ export default function RegisterBloodBankPage() {
                 Blood Bank Network Registration
               </h1>
               <p className="text-xs sm:text-sm text-slate-400">
-                Direct Firestore integration with live 15 km GPS geohashed incident broadcast.
+                Institutional registration with license verification gate for live 15 km GPS crash alerts.
               </p>
             </div>
           </div>
 
           {success ? (
-            <div className="bg-emerald-950/40 border border-emerald-500/40 rounded-2xl p-6 sm:p-8 text-center space-y-4 animate-in fade-in duration-300">
-              <div className="w-16 h-16 rounded-full bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center mx-auto">
-                <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+            /* Confirmation Screen (Fix 2: No direct dashboard link yet) */
+            <div className="bg-amber-950/30 border border-amber-500/40 rounded-2xl p-6 sm:p-8 text-center space-y-5 animate-in fade-in duration-300">
+              <div className="w-16 h-16 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center mx-auto">
+                <Clock className="w-8 h-8 text-amber-400" />
               </div>
-              <h3 className="text-xl font-bold text-white">Blood Bank Successfully Registered!</h3>
-              <p className="text-xs sm:text-sm text-slate-300 max-w-md mx-auto leading-relaxed">
-                Your facility <strong>{formData.name}</strong> has been tagged in the AcciAlert
-                network and will immediately receive prioritized active accident pings.
-              </p>
-              <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
+
+              <div className="space-y-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-950 border border-amber-700 text-xs font-mono font-bold text-amber-300 uppercase">
+                  Status: Pending Manual Verification
+                </span>
+                <h3 className="text-xl sm:text-2xl font-bold text-white">
+                  Registration Submitted Successfully!
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-300 max-w-lg mx-auto leading-relaxed">
+                  Your facility <strong>{formData.name}</strong> has been registered with license number{" "}
+                  <strong className="font-mono text-amber-300">{formData.licenseNo}</strong>.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 text-left max-w-lg mx-auto space-y-2 text-xs text-slate-300">
+                <div className="flex items-start gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <span>
+                    <strong>License Review in Progress:</strong> Our medical team will verify your state registration license before activating live crash telemetry.
+                  </span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Lock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <span>
+                    <strong>Privacy Guard:</strong> Live accident locations and victim medical profiles remain locked until approval is confirmed.
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-3">
                 <button
                   onClick={() => router.push("/blood-banks/dashboard")}
-                  className="px-6 py-3 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 transition-colors shadow-lg"
+                  className="px-6 py-3.5 rounded-xl text-xs font-bold text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-colors shadow-lg flex items-center gap-2"
                 >
-                  View Live Incident Dashboard
+                  <Lock className="w-4 h-4 text-amber-400" />
+                  <span>Check Approval Status on Dashboard</span>
                 </button>
+
                 <button
                   onClick={() => {
                     setSuccess(false);
                     setFormData({
                       name: "",
                       licenseNo: "",
-                      phone: "",
                       email: "",
+                      password: "",
+                      confirmPassword: "",
+                      phone: "",
                       address: "",
                       lat: 28.6139,
                       lng: 77.209,
                       supportedGroups: ["O+", "O-", "A+", "B+"],
                     });
                   }}
-                  className="px-6 py-3 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 transition-colors"
+                  className="px-5 py-3.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 transition-colors"
                 >
                   Register Another Facility
                 </button>
@@ -235,7 +310,73 @@ export default function RegisterBloodBankPage() {
                 </div>
               </div>
 
-              {/* Contact Info */}
+              {/* Institutional Authentication Credentials */}
+              <div className="p-5 rounded-2xl bg-[#0B0F19] border border-slate-800 space-y-4">
+                <div className="flex items-center gap-2">
+                  <KeyRound className="w-4 h-4 text-cyan-400" />
+                  <span className="text-xs font-bold text-white uppercase tracking-wider">
+                    Institutional Login Credentials
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Used to securely access your facility&apos;s live accident radar dashboard.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-semibold text-slate-300">
+                      Official Email *
+                    </label>
+                    <div className="relative">
+                      <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+                      <input
+                        type="email"
+                        required
+                        placeholder="dispatch@hospital.org"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        className="w-full bg-[#111827] border border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-semibold text-slate-300">
+                      Password (min 6 chars) *
+                    </label>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+                      <input
+                        type="password"
+                        required
+                        placeholder="••••••••"
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        className="w-full bg-[#111827] border border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-semibold text-slate-300">
+                      Confirm Password *
+                    </label>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+                      <input
+                        type="password"
+                        required
+                        placeholder="••••••••"
+                        value={formData.confirmPassword}
+                        onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                        className="w-full bg-[#111827] border border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact Info & Physical Address */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="space-y-1.5">
                   <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
@@ -256,37 +397,19 @@ export default function RegisterBloodBankPage() {
 
                 <div className="space-y-1.5">
                   <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
-                    Official Email Address *
+                    Physical Facility Address *
                   </label>
                   <div className="relative">
-                    <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
+                    <MapPin className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
                     <input
-                      type="email"
+                      type="text"
                       required
-                      placeholder="dispatch@apextrauma.org"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="e.g. Ring Road Trauma Complex, Sector 4, New Delhi"
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                       className="w-full bg-[#0B0F19] border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none focus:border-red-500 transition-colors placeholder:text-slate-600"
                     />
                   </div>
-                </div>
-              </div>
-
-              {/* Physical Address */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
-                  Physical Facility Address *
-                </label>
-                <div className="relative">
-                  <MapPin className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Ring Road Trauma Complex, Sector 4, New Delhi"
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    className="w-full bg-[#0B0F19] border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none focus:border-red-500 transition-colors placeholder:text-slate-600"
-                  />
                 </div>
               </div>
 
@@ -298,7 +421,7 @@ export default function RegisterBloodBankPage() {
                       GPS Coordinates (Geohash Tagging)
                     </span>
                     <p className="text-[11px] text-slate-400">
-                      Used for live distance calculations when accidents occur.
+                      Used for live distance calculations when accidents occur within 15 km.
                     </p>
                   </div>
                   <button
@@ -392,12 +515,12 @@ export default function RegisterBloodBankPage() {
                   {submitting ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Writing to Firestore /blood_banks...</span>
+                      <span>Creating Account & Submitting for Verification...</span>
                     </>
                   ) : (
                     <>
                       <ShieldCheck className="w-5 h-5" />
-                      <span>Submit & Register Facility in Network</span>
+                      <span>Submit Registration (Verification Required)</span>
                     </>
                   )}
                 </button>

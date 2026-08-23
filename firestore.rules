@@ -1,0 +1,94 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // 1. LIVE ACCIDENTS FEED (RESTRICTED TO APPROVED BLOOD BANKS ONLY)
+    // ===============================================================
+    match /accidents/{accidentId} {
+      // Only authenticated blood banks whose status is explicitly "approved" can read live crash telemetry
+      allow read: if request.auth != null
+                  && exists(/databases/$(database)/documents/bloodBanks/$(request.auth.uid))
+                  && get(/databases/$(database)/documents/bloodBanks/$(request.auth.uid)).data.status == "approved";
+      
+      // Accident telemetry is written only by verified app backend / trusted Cloud Functions / Admin SDK
+      allow write: if false;
+    }
+
+    // ===============================================================
+    // 2. BLOOD BANKS REGISTRATION & PROFILE (CANNOT SELF-APPROVE)
+    // ===============================================================
+    match /bloodBanks/{bankId} {
+      // Must be authenticated as the owner, and can only register with "pending" status
+      allow create: if request.auth != null
+                    && request.auth.uid == bankId
+                    && request.resource.data.status == "pending";
+
+      // A blood bank can read its own profile doc
+      allow read: if request.auth != null && request.auth.uid == bankId;
+
+      // A blood bank can update its address/phone, but CANNOT change its own status field
+      allow update: if request.auth != null
+                    && request.auth.uid == bankId
+                    && request.resource.data.status == resource.data.status;
+
+      // Status changes and deletions are restricted to trusted backend / Admin
+      allow delete: if false;
+    }
+
+    // ===============================================================
+    // 3. DIGITAL BLACKBOX CRASH REPORTS (GET BY REPORT ID ONLY)
+    // ===============================================================
+    match /reports/{reportId} {
+      // Direct get by Report ID for approved institutional authorities (Police, Insurance, Trauma)
+      allow get: if request.auth != null
+                 && exists(/databases/$(database)/documents/institutions/$(request.auth.uid))
+                 && get(/databases/$(database)/documents/institutions/$(request.auth.uid)).data.status == "approved";
+
+      // Never allow querying / listing all victim reports to prevent scraping
+      allow list: if false;
+
+      // Reports are immutable and written only by backend
+      allow write: if false;
+    }
+
+    // ===============================================================
+    // 4. INSTITUTIONAL ACCOUNTS (POLICE / INSURANCE / TRAUMA REGISTRARS)
+    // ===============================================================
+    match /institutions/{instId} {
+      allow create: if request.auth != null
+                    && request.auth.uid == instId
+                    && request.resource.data.status == "pending";
+
+      allow read: if request.auth != null && request.auth.uid == instId;
+
+      allow update: if request.auth != null
+                    && request.auth.uid == instId
+                    && request.resource.data.status == resource.data.status;
+
+      allow delete: if false;
+    }
+
+    // ===============================================================
+    // 5. AUDIT ACCESS LOGS (WRITE-ONLY AUDIT TRAIL)
+    // ===============================================================
+    match /accessLogs/{logId} {
+      // Any authenticated user / institution can append an access log entry
+      allow create: if request.auth != null;
+
+      // Access logs cannot be modified, read, or deleted from client SDK
+      allow read, update, delete: if false;
+    }
+
+    // ===============================================================
+    // 6. USER PROFILES & TELEMETRY
+    // ===============================================================
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      match /incidents/{incidentId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+  }
+}

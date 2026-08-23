@@ -187,7 +187,7 @@ export default function BloodBankFeatureSection() {
                 </div>
                 <div className="flex items-start gap-3 text-xs text-slate-200">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span><strong>100% Free & Open-Access:</strong> Certified for medical emergency interoperability.</span>
+                  <span><strong>100% Free & Open-Access:</strong> Engineered for medical emergency workflows.</span>
                 </div>
               </div>
             </div>

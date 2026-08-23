@@ -59,8 +59,11 @@ export interface AccidentDocument {
   notes?: string;
 }
 
+export type BloodBankStatus = "pending" | "approved" | "rejected";
+
 export interface BloodBankDocument {
   id?: string;
+  uid?: string;
   name: string;
   licenseNo: string;
   phone: string;
@@ -69,8 +72,32 @@ export interface BloodBankDocument {
   lat: number;
   lng: number;
   supportedGroups: string[];
-  isVerified: boolean;
+  status: BloodBankStatus;
+  isVerified?: boolean;
   createdAt: any;
+  approvedAt?: any;
+  rejectedAt?: any;
+  rejectionReason?: string;
+}
+
+export interface ReportDocument {
+  id?: string;
+  reportId: string;
+  accidentId?: string;
+  userId?: string;
+  user: UserDocument;
+  incident: IncidentDocument;
+  createdAt: any;
+  verifiedBy?: string;
+}
+
+export interface AccessLogDocument {
+  id?: string;
+  reportId: string;
+  institutionId: string;
+  institutionName?: string;
+  timestamp: any;
+  ipOrUserAgent?: string;
 }
 
 export interface SimulationStage {
