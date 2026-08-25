@@ -25,6 +25,9 @@ export const metadata: Metadata = {
     "First Responder Dispatch",
   ],
   authors: [{ name: "Aniket DevStudio" }],
+  verification: {
+    google: "google7a78c84f7086c22f.html",
+  },
 };
 
 export default function RootLayout({
