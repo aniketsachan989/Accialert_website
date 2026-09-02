@@ -67,6 +67,16 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/guides/golden-hour-trauma-care" className="hover:text-white transition-colors">
+                  Golden Hour Trauma Guide
+                </Link>
+              </li>
+              <li>
+                <Link href="/guides/india-emergency-numbers-112-108" className="hover:text-white transition-colors">
+                  India 112 / 108 Emergency Guide
+                </Link>
+              </li>
+              <li>
                 <a
                   href="https://play.google.com/store/apps/details?id=com.aniket.accialertsos&pcampaignid=web_share"
                   target="_blank"
@@ -142,10 +152,20 @@ export default function Footer() {
           <div>
             © {new Date().getFullYear()} Aniket DevStudio. All rights reserved.
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-slate-400">Android Open Source Safety Protocol</span>
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-[11px]">
+            <Link href="/privacy-policy" className="hover:text-white transition-colors">
+              Privacy Policy
+            </Link>
             <span>•</span>
-            <span className="text-slate-400">Built for first-responder workflows</span>
+            <Link href="/terms" className="hover:text-white transition-colors">
+              Terms of Service
+            </Link>
+            <span>•</span>
+            <Link href="/contact" className="hover:text-white transition-colors">
+              Contact &amp; Support
+            </Link>
+            <span>•</span>
+            <span className="text-slate-500">Built for first-responder workflows</span>
           </div>
         </div>
       </div>
