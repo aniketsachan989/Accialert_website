@@ -102,7 +102,7 @@ export default async function Image() {
                 backgroundColor: "#EF4444",
               }}
             />
-            <span>v5.0 Pro Active</span>
+            <span>v6.0 Pro Active</span>
           </div>
         </div>
 

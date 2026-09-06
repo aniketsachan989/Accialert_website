@@ -56,7 +56,7 @@ export default function DownloadModal({ isOpen, onClose }: DownloadModalProps) {
             <div className="flex items-center gap-2">
               <h3 className="text-xl font-bold text-white">Get AcciAlert on Google Play</h3>
               <span className="bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold text-[10px] px-2 py-0.5 rounded-full">
-                v5.0 Active
+                v6.0 Active
               </span>
             </div>
             <p className="text-xs text-slate-400">Official Android Release • Verified by Google Play Protect</p>

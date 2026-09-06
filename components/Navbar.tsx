@@ -64,7 +64,7 @@ export default function Navbar() {
                 ACCI<span className="text-red-500">ALERT</span>
               </span>
               <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-widest bg-gradient-to-r from-red-600 to-rose-600 text-white px-1.5 sm:px-2 py-0.5 rounded shadow-sm shadow-red-950">
-                v5.0 Pro
+                v6.0 Pro
               </span>
             </div>
             <p className="text-[10px] sm:text-[11px] text-slate-400 -mt-0.5 hidden md:block">

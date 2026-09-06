@@ -99,7 +99,7 @@ export default function GoldenHourGuidePage() {
           <div className="p-6 rounded-2xl bg-gradient-to-r from-red-950/40 via-slate-900 to-slate-900 border border-red-500/40 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-bold text-white">Protect Yourself on Every Journey</h3>
-              <p className="text-xs text-slate-300 mt-1">Download AcciAlert v5.0 Pro on Google Play Store for zero-delay crash defense.</p>
+              <p className="text-xs text-slate-300 mt-1">Download AcciAlert v6.0 Pro on Google Play Store for zero-delay crash defense.</p>
             </div>
             <a
               href={PLAY_STORE_URL}

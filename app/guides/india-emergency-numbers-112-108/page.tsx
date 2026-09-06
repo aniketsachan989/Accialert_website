@@ -93,7 +93,7 @@ export default function EmergencyNumbersGuidePage() {
           <div className="p-6 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-900 border border-emerald-500/40 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-bold text-white">Equip Automatic Accident Protection</h3>
-              <p className="text-xs text-slate-300 mt-1">Download AcciAlert v5.0 Pro for autonomous crash detection &amp; blood bank alerts.</p>
+              <p className="text-xs text-slate-300 mt-1">Download AcciAlert v6.0 Pro for autonomous crash detection &amp; blood bank alerts.</p>
             </div>
             <a
               href={PLAY_STORE_URL}

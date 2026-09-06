@@ -67,7 +67,7 @@ export default function BloodBankFeatureSection() {
                   </div>
                 </div>
                 <span className="text-[10px] font-mono font-bold uppercase text-red-400 bg-red-950 px-2.5 py-1 rounded-full border border-red-800">
-                  v5.0 Active
+                  v6.0 Active
                 </span>
               </div>
 

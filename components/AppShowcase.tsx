@@ -33,7 +33,7 @@ const SCREENS = [
     tagline: "Live Sensor Monitoring, 1-Tap SOS & Blood Radar",
     image: "/app-screens/screen-home.png",
     accent: "text-emerald-400 border-emerald-500/40 bg-emerald-950/30",
-    badge: "PROTECTION ACTIVE • v5.0",
+    badge: "PROTECTION ACTIVE • v6.0",
     badgeColor: "bg-emerald-500 text-black",
     features: [
       "Real-time on-device collision and impact sensor monitoring loop.",
@@ -77,7 +77,7 @@ export default function AppShowcase() {
             <div className="w-4 h-4 rounded-full overflow-hidden shrink-0">
               <Image src="/logo.png" alt="Logo" width={16} height={16} className="w-full h-full object-contain" />
             </div>
-            <span>OFFICIAL ANDROID APP v5.0 INTERFACE</span>
+            <span>OFFICIAL ANDROID APP v6.0 INTERFACE</span>
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">
             Designed for Instant Clarity When Seconds Count

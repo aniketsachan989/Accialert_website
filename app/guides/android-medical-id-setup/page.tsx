@@ -98,7 +98,7 @@ export default function AndroidSetupGuidePage() {
           <div className="p-6 rounded-2xl bg-gradient-to-r from-cyan-950/40 via-slate-900 to-slate-900 border border-cyan-500/40 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-bold text-white">Equip Your Device Now</h3>
-              <p className="text-xs text-slate-300 mt-1">Install AcciAlert v5.0 Pro to enable continuous edge safety protection.</p>
+              <p className="text-xs text-slate-300 mt-1">Install AcciAlert v6.0 Pro to enable continuous edge safety protection.</p>
             </div>
             <a
               href={PLAY_STORE_URL}

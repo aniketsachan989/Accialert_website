@@ -35,7 +35,7 @@ export default function Footer() {
                 <Lock className="w-3 h-3 text-emerald-400" /> AES-256 Encrypted
               </span>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-red-950/70 border border-red-800/60 text-[10px] text-red-300 font-mono font-bold">
-                <Activity className="w-3 h-3 text-red-400" /> v5.0 Pro
+                <Activity className="w-3 h-3 text-red-400" /> v6.0 Pro
               </span>
             </div>
           </div>
@@ -83,7 +83,7 @@ export default function Footer() {
                   rel="noopener noreferrer"
                   className="text-emerald-400 hover:text-emerald-300 transition-colors flex items-center gap-1 font-semibold"
                 >
-                  Get v5.0 on Google Play ↗
+                  Get v6.0 on Google Play ↗
                 </a>
               </li>
             </ul>
