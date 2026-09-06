@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { AccidentDocument } from "@/types";
 import { formatDateTime, calculateDistanceKm } from "@/lib/utils";
-import { queueEmergencyAlertEmail } from "@/lib/firestore-helpers";
+import { queueEmergencyAlertEmail, updateAccidentAction } from "@/lib/firestore-helpers";
 
 interface LiveAccidentCardProps {
   accident: AccidentDocument;
@@ -37,8 +37,12 @@ export default function LiveAccidentCard({
   bankName,
   onAcknowledge,
 }: LiveAccidentCardProps) {
-  const [mobilized, setMobilized] = useState(false);
-  const [acknowledged, setAcknowledged] = useState(false);
+  const [mobilized, setMobilized] = useState(
+    Boolean((accident as any).mobilized || accident.status === "MOBILIZED")
+  );
+  const [acknowledged, setAcknowledged] = useState(
+    Boolean((accident as any).acknowledged)
+  );
   const [isResendingEmail, setIsResendingEmail] = useState(false);
   const [emailStatusText, setEmailStatusText] = useState<string | null>(null);
 
@@ -52,13 +56,28 @@ export default function LiveAccidentCard({
         )
       : null;
 
-  // Silent state transitions - No audible sirens or loud alarms
-  const handleMobilize = () => {
+  // Silent state transitions - Two-way Firestore persistence
+  const handleMobilize = async () => {
     setMobilized(true);
+    if (accident.id) {
+      await updateAccidentAction(
+        accident.id,
+        "mobilize",
+        bankName || "Verified Blood Bank",
+        accident.bloodGroup
+      );
+    }
   };
 
-  const handleAck = () => {
+  const handleAck = async () => {
     setAcknowledged(true);
+    if (accident.id) {
+      await updateAccidentAction(
+        accident.id,
+        "acknowledge",
+        bankName || "Verified Blood Bank"
+      );
+    }
     if (onAcknowledge && accident.id) {
       onAcknowledge(accident.id);
     }
@@ -67,7 +86,7 @@ export default function LiveAccidentCard({
   const handleResendEmail = async () => {
     const targetEmail = bankEmail || "bloodbank.emergency@trauma-network.org";
     setIsResendingEmail(true);
-    setEmailStatusText("Queueing priority email...");
+    setEmailStatusText("Dispatching priority email...");
 
     try {
       const res = await queueEmergencyAlertEmail({
@@ -84,15 +103,19 @@ export default function LiveAccidentCard({
       });
 
       if (res.success) {
-        setEmailStatusText(`Priority email dispatched to ${targetEmail}`);
+        if (res.delivered) {
+          setEmailStatusText(`✅ Physical email delivered via SMTP to ${targetEmail}`);
+        } else {
+          setEmailStatusText(`Priority email queued for ${targetEmail}`);
+        }
       } else {
-        setEmailStatusText("Email queued into /mail collection");
+        setEmailStatusText("Email logged into cloud dispatch stream");
       }
     } catch (e: any) {
       setEmailStatusText("Email queued in cloud mail stream");
     } finally {
       setIsResendingEmail(false);
-      setTimeout(() => setEmailStatusText(null), 5000);
+      setTimeout(() => setEmailStatusText(null), 6000);
     }
   };
 
@@ -270,7 +293,20 @@ export default function LiveAccidentCard({
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {accident.location?.latitude && accident.location?.longitude && (
+            <a
+              href={`https://www.google.com/maps/dir/?api=1&destination=${accident.location.latitude},${accident.location.longitude}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0B0F19] hover:bg-slate-800 text-emerald-300 border border-emerald-800/80 text-xs font-semibold transition-colors"
+              title="Open turn-by-turn driving navigation to accident coordinates"
+            >
+              <Navigation className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Navigate (GPS)</span>
+            </a>
+          )}
+
           <Link
             href={`/blackbox-portal?name=${encodeURIComponent(accident.userName || "")}&bloodGroup=${encodeURIComponent(accident.bloodGroup || "O+")}&phone=${encodeURIComponent(accident.userPhone || "")}`}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0B0F19] hover:bg-slate-800 text-cyan-300 border border-cyan-800/80 text-xs font-semibold transition-colors"

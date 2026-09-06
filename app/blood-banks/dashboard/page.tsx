@@ -293,12 +293,16 @@ export default function BloodBankDashboardPage() {
       });
 
       if (res.success) {
-        setSimMessage(`✅ Test priority email dispatched to ${targetEmail}! (Sirens silenced per protocol)`);
+        if (res.delivered) {
+          setSimMessage(`✅ Real physical email delivered via SMTP to ${targetEmail}! (Sirens muted)`);
+        } else {
+          setSimMessage(`✅ Test priority email queued for ${targetEmail}! (Sirens muted • Configure SMTP_USER/PASS for inbox delivery)`);
+        }
       } else {
-        setSimMessage(`Test email logged to /mail: ${res.error || "queued"}`);
+        setSimMessage(`Test email logged to dispatch queue: ${res.error || "queued"}`);
       }
     } catch (err: any) {
-      setSimMessage("Test alert queued to cloud mail queue.");
+      setSimMessage("Test alert queued to cloud mail stream.");
     } finally {
       setTestEmailLoading(false);
       setTimeout(() => setSimMessage(""), 7000);

@@ -54,9 +54,15 @@ export interface AccidentDocument {
   gForce: number;
   location: IncidentLocation;
   weatherCondition: string;
-  status: "ACTIVE" | "RESOLVED";
+  status: "ACTIVE" | "MOBILIZED" | "RESOLVED";
   createdAt: any;
   notes?: string;
+  mobilized?: boolean;
+  acknowledged?: boolean;
+  mobilizedBankName?: string;
+  acknowledgedBankName?: string;
+  emailDispatched?: boolean;
+  recipientEmail?: string | null;
 }
 
 export type BloodBankStatus = "pending" | "approved" | "rejected";

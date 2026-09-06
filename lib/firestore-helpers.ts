@@ -699,9 +699,78 @@ Blackbox Report: ${blackboxUrl}
       createdAt: serverTimestamp(),
     });
 
-    return { success: true, mailId: mailDocRef.id };
+    // Dispatch real email via Next.js /api/send-email (SMTP / Gmail App Password)
+    let apiDelivery: any = null;
+    if (typeof window !== "undefined") {
+      try {
+        const res = await fetch("/api/send-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to,
+            subject,
+            text: textContent,
+            html: htmlContent,
+            metadata: { bloodGroup, accidentId, reportId },
+          }),
+        });
+        if (res.ok) {
+          apiDelivery = await res.json();
+        }
+      } catch (fetchErr) {
+        console.warn("Direct SMTP API call warning:", fetchErr);
+      }
+    }
+
+    return {
+      success: true,
+      mailId: mailDocRef.id,
+      delivered: Boolean(apiDelivery?.delivered),
+      simulated: Boolean(apiDelivery?.simulated),
+      provider: apiDelivery?.provider || "firestore-queue",
+    };
   } catch (err: any) {
     console.error("Failed to queue emergency email in /mail:", err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Acknowledges or mobilizes an accident from a blood bank, persisting the status to Firestore
+ * so the mobile app, first responders, and blackbox portal show live confirmation.
+ */
+export async function updateAccidentAction(
+  accidentId: string,
+  action: "acknowledge" | "mobilize",
+  bankName: string,
+  bloodGroup?: string
+) {
+  try {
+    const updatePayload: any = {
+      lastActionAt: serverTimestamp(),
+    };
+
+    if (action === "acknowledge") {
+      updatePayload.acknowledged = true;
+      updatePayload.acknowledgedBankName = bankName;
+      updatePayload.acknowledgedAt = serverTimestamp();
+    } else if (action === "mobilize") {
+      updatePayload.mobilized = true;
+      updatePayload.mobilizedBankName = bankName;
+      updatePayload.mobilizedAt = serverTimestamp();
+      updatePayload.status = "MOBILIZED";
+      if (bloodGroup) updatePayload.mobilizedBloodGroup = bloodGroup;
+    }
+
+    // Update in both accidents and emergency_dispatches if present
+    await Promise.allSettled([
+      setDoc(doc(db, "accidents", accidentId), updatePayload, { merge: true }),
+      setDoc(doc(db, "emergency_dispatches", accidentId), updatePayload, { merge: true }),
+    ]);
+
+    return { success: true };
+  } catch (err: any) {
+    console.error("Failed to update accident action:", err);
     return { success: false, error: err.message };
   }
 }
