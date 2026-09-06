@@ -21,7 +21,7 @@ import {
   KeyRound,
   ShieldAlert,
 } from "lucide-react";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { registerBloodBankDoc } from "@/lib/firestore-helpers";
 import { playAlertSound } from "@/lib/utils";
@@ -125,7 +125,7 @@ export default function RegisterBloodBankPage() {
 
     setSubmitting(true);
     try {
-      // 1. Create Firebase Auth user account
+      // 1. Create or sign into Firebase Auth user account
       let userUid = "";
       try {
         const userCred = await createUserWithEmailAndPassword(
@@ -135,11 +135,21 @@ export default function RegisterBloodBankPage() {
         );
         userUid = userCred.user.uid;
       } catch (authErr: any) {
-        // If email already exists or auth fails
+        // If email already exists (e.g. from previous attempt before firestore write)
         if (authErr.code === "auth/email-already-in-use") {
-          throw new Error("This email is already registered. Please login to your existing account.");
+          try {
+            const loginCred = await signInWithEmailAndPassword(
+              auth,
+              formData.email.trim(),
+              formData.password
+            );
+            userUid = loginCred.user.uid;
+          } catch (loginErr: any) {
+            throw new Error("This email is already registered. If this is your account, please enter the correct password or log in directly.");
+          }
+        } else {
+          throw new Error(authErr.message || "Failed to create institutional authentication user.");
         }
-        throw new Error(authErr.message || "Failed to create institutional authentication user.");
       }
 
       // 2. Write document to Firestore `bloodBanks/{uid}` with `status: "pending"`
