@@ -17,8 +17,11 @@ import {
 import { db, auth } from "@/lib/firebase";
 import { AccidentDocument, BloodBankDocument } from "@/types";
 import LiveAccidentCard from "@/components/LiveAccidentCard";
-import { pushTestAccident, getBloodBankProfile } from "@/lib/firestore-helpers";
-import { playAlertSound } from "@/lib/utils";
+import {
+  pushTestAccident,
+  getBloodBankProfile,
+  queueEmergencyAlertEmail,
+} from "@/lib/firestore-helpers";
 import {
   Radio,
   PlusCircle,
@@ -41,6 +44,7 @@ import {
   XCircle,
   Loader2,
   ArrowRight,
+  Send,
 } from "lucide-react";
 
 export default function BloodBankDashboardPage() {
@@ -196,9 +200,7 @@ export default function BloodBankDashboardPage() {
             dispatchesList.push(parseToAccidentDocument(docSnap));
           });
           mergeAndSort();
-          if (dispatchesList.length > 0) {
-            playAlertSound("beep");
-          }
+          // Siren / beep sounds removed per hospital quiet protocol
         },
         (error) => {
           console.warn("Firestore emergency_dispatches onSnapshot error:", error);
@@ -244,7 +246,6 @@ export default function BloodBankDashboardPage() {
 
     try {
       await signInWithEmailAndPassword(auth, loginEmail.trim(), loginPassword);
-      playAlertSound("success");
     } catch (err: any) {
       console.error(err);
       if (
@@ -256,7 +257,6 @@ export default function BloodBankDashboardPage() {
       } else {
         setLoginError(err.message || "Failed to sign in. Please try again.");
       }
-      playAlertSound("beep");
     } finally {
       setLoginLoading(false);
     }
@@ -267,28 +267,64 @@ export default function BloodBankDashboardPage() {
       await signOut(auth);
       setAuthState("unauthenticated");
       setAccidents([]);
-      playAlertSound("beep");
     } catch (err) {
       console.error("Sign out error:", err);
     }
   };
 
-  const handleSimulateCrash = async () => {
-    setIsSimulating(true);
-    setSimMessage("Publishing emergency incident packet to Firestore /accidents...");
-    playAlertSound("siren");
+  const [testEmailLoading, setTestEmailLoading] = useState(false);
+
+  const handleTestEmailDispatch = async () => {
+    const targetEmail = bankProfile?.email || currentUser?.email || "dispatch@bloodbank-trauma.org";
+    setTestEmailLoading(true);
+    setSimMessage(`Queueing test emergency email dispatch to ${targetEmail}...`);
 
     try {
-      const res = await pushTestAccident();
+      const res = await queueEmergencyAlertEmail({
+        to: targetEmail,
+        bankName: bankProfile?.name || "Verified Blood Bank",
+        victimName: "Test Trauma Casualty (Staff Drill)",
+        bloodGroup: "O-",
+        locationAddress: "AIIMS Trauma Center Intersection, Ring Road, New Delhi",
+        latitude: bankProfile?.lat || 28.5672,
+        longitude: bankProfile?.lng || 77.2100,
+        distanceKm: 1.8,
+        impactGForce: 5.8,
+      });
+
       if (res.success) {
-        setSimMessage(`Crash alert published live with ID: ${res.id}`);
-        playAlertSound("success");
+        setSimMessage(`✅ Test priority email dispatched to ${targetEmail}! (Sirens silenced per protocol)`);
+      } else {
+        setSimMessage(`Test email logged to /mail: ${res.error || "queued"}`);
+      }
+    } catch (err: any) {
+      setSimMessage("Test alert queued to cloud mail queue.");
+    } finally {
+      setTestEmailLoading(false);
+      setTimeout(() => setSimMessage(""), 7000);
+    }
+  };
+
+  const handleSimulateCrash = async () => {
+    setIsSimulating(true);
+    const targetEmail = bankProfile?.email || currentUser?.email || "dispatch@bloodbank-trauma.org";
+    setSimMessage(`Publishing silent emergency packet & queueing priority email to ${targetEmail}...`);
+    // Sirens silenced per hospital quiet protocol
+
+    try {
+      const res = await pushTestAccident(
+        undefined,
+        targetEmail,
+        bankProfile?.name || "Verified Blood Bank"
+      );
+      if (res.success) {
+        setSimMessage(`Crash alert published live with ID: ${res.id}. Priority email dispatched to ${targetEmail}.`);
       }
     } catch (e: any) {
       setSimMessage(e.message || "Simulation error");
     } finally {
       setIsSimulating(false);
-      setTimeout(() => setSimMessage(""), 5000);
+      setTimeout(() => setSimMessage(""), 7000);
     }
   };
 
@@ -577,7 +613,7 @@ export default function BloodBankDashboardPage() {
               </p>
             </div>
 
-            {/* Actions: Simulation + User Account */}
+            {/* Actions: Simulation + Test Email + User Account */}
             <div className="flex flex-wrap items-center gap-3">
               <button
                 onClick={handleSimulateCrash}
@@ -586,6 +622,16 @@ export default function BloodBankDashboardPage() {
               >
                 <Flame className="w-4 h-4 text-white animate-pulse" />
                 <span>{isSimulating ? "Publishing Alert..." : "Trigger Test Crash"}</span>
+              </button>
+
+              <button
+                onClick={handleTestEmailDispatch}
+                disabled={testEmailLoading}
+                className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-blue-300 bg-blue-950/80 hover:bg-blue-900 border border-blue-700 transition-colors active:scale-95 disabled:opacity-50"
+                title="Send test emergency email to verify inbox connectivity"
+              >
+                <Send className="w-3.5 h-3.5 text-blue-400" />
+                <span>{testEmailLoading ? "Queueing Mail..." : "Test Email Alert"}</span>
               </button>
 
               <button
@@ -599,13 +645,42 @@ export default function BloodBankDashboardPage() {
             </div>
           </div>
 
-          {/* Feedback banner for test accident creation */}
+          {/* Feedback banner for test accident / email creation */}
           {simMessage && (
-            <div className="mt-4 p-3 rounded-xl bg-red-950/80 border border-red-700 text-xs text-red-200 flex items-center gap-2 animate-in fade-in">
-              <Zap className="w-4 h-4 text-amber-400 shrink-0" />
+            <div className="mt-4 p-3 rounded-xl bg-blue-950/80 border border-blue-700 text-xs text-blue-200 flex items-center gap-2 animate-in fade-in">
+              <Zap className="w-4 h-4 text-cyan-400 shrink-0" />
               <span>{simMessage}</span>
             </div>
           )}
+
+          {/* Silent Priority Email Notification Channel Status Banner */}
+          <div className="mt-6 p-4 rounded-2xl bg-gradient-to-r from-blue-950/40 via-slate-900/60 to-blue-950/30 border border-blue-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center shrink-0">
+                <Mail className="w-5 h-5 text-blue-400" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                    Silent Email Dispatch Protocol Active
+                  </h4>
+                  <span className="text-[10px] font-mono font-bold bg-blue-950 text-blue-300 px-2 py-0.5 rounded border border-blue-700">
+                    SIRENS SUPPRESSED
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-300 mt-0.5">
+                  Audible alarms are disabled to maintain clinical focus. Incoming collision trauma packets are dispatched directly via priority email to{" "}
+                  <strong className="text-white font-mono">{bankProfile?.email || currentUser?.email || "registered blood bank email"}</strong>.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400 bg-emerald-950/60 px-3 py-1.5 rounded-lg border border-emerald-800">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Mail Gateway Connected</span>
+              </span>
+            </div>
+          </div>
 
           {/* Facility Info & Blood Group Filter */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mt-6 pt-6 border-t border-slate-800">
@@ -691,8 +766,10 @@ export default function BloodBankDashboardPage() {
                   key={acc.id || idx}
                   accident={acc}
                   bankLocation={{ lat: bankLat, lng: bankLng }}
+                  bankEmail={bankProfile?.email || currentUser?.email || undefined}
+                  bankName={bankProfile?.name || undefined}
                   onAcknowledge={(id) => {
-                    alert(`Alert acknowledged for Incident ${id}. Dispatch route recorded.`);
+                    // Silent acknowledgement without sound
                   }}
                 />
               ))}

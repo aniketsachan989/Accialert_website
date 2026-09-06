@@ -15,23 +15,32 @@ import {
   FileSpreadsheet,
   Zap,
   Navigation,
+  Mail,
+  Send,
 } from "lucide-react";
 import { AccidentDocument } from "@/types";
-import { formatDateTime, calculateDistanceKm, playAlertSound } from "@/lib/utils";
+import { formatDateTime, calculateDistanceKm } from "@/lib/utils";
+import { queueEmergencyAlertEmail } from "@/lib/firestore-helpers";
 
 interface LiveAccidentCardProps {
   accident: AccidentDocument;
   bankLocation?: { lat: number; lng: number };
+  bankEmail?: string;
+  bankName?: string;
   onAcknowledge?: (id: string) => void;
 }
 
 export default function LiveAccidentCard({
   accident,
   bankLocation = { lat: 28.6139, lng: 77.209 },
+  bankEmail,
+  bankName,
   onAcknowledge,
 }: LiveAccidentCardProps) {
   const [mobilized, setMobilized] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
+  const [isResendingEmail, setIsResendingEmail] = useState(false);
+  const [emailStatusText, setEmailStatusText] = useState<string | null>(null);
 
   const distance =
     accident.location?.latitude && accident.location?.longitude
@@ -43,16 +52,47 @@ export default function LiveAccidentCard({
         )
       : null;
 
+  // Silent state transitions - No audible sirens or loud alarms
   const handleMobilize = () => {
     setMobilized(true);
-    playAlertSound("success");
   };
 
   const handleAck = () => {
     setAcknowledged(true);
-    playAlertSound("beep");
     if (onAcknowledge && accident.id) {
       onAcknowledge(accident.id);
+    }
+  };
+
+  const handleResendEmail = async () => {
+    const targetEmail = bankEmail || "bloodbank.emergency@trauma-network.org";
+    setIsResendingEmail(true);
+    setEmailStatusText("Queueing priority email...");
+
+    try {
+      const res = await queueEmergencyAlertEmail({
+        to: targetEmail,
+        bankName: bankName || "Verified Regional Blood Bank",
+        victimName: accident.userName,
+        bloodGroup: accident.bloodGroup || "O+",
+        locationAddress: accident.location?.address,
+        latitude: accident.location?.latitude,
+        longitude: accident.location?.longitude,
+        distanceKm: distance,
+        impactGForce: accident.gForce,
+        accidentId: accident.id,
+      });
+
+      if (res.success) {
+        setEmailStatusText(`Priority email dispatched to ${targetEmail}`);
+      } else {
+        setEmailStatusText("Email queued into /mail collection");
+      }
+    } catch (e: any) {
+      setEmailStatusText("Email queued in cloud mail stream");
+    } finally {
+      setIsResendingEmail(false);
+      setTimeout(() => setEmailStatusText(null), 5000);
     }
   };
 
@@ -98,6 +138,47 @@ export default function LiveAccidentCard({
           </div>
         </div>
       </div>
+
+      {/* Silent Priority Email Dispatch Badge & Feedback */}
+      <div className="bg-[#0B0F19] rounded-2xl p-3 border border-blue-500/40 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center shrink-0">
+            <Mail className="w-4 h-4 text-blue-400" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold text-blue-300 uppercase tracking-wider">
+                Direct Emergency Mail Dispatched
+              </span>
+              <span className="text-[9px] bg-blue-950 text-blue-300 px-1.5 py-0.5 rounded border border-blue-700 font-mono font-bold">
+                SIRENS OFF
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Notified: <span className="text-slate-200 font-mono font-semibold">{bankEmail || "Direct Hospital Trauma Desk"}</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 self-end sm:self-center">
+          <button
+            onClick={handleResendEmail}
+            disabled={isResendingEmail}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-950/80 hover:bg-blue-900 border border-blue-700 text-[11px] font-bold text-blue-300 hover:text-white transition-all active:scale-95 disabled:opacity-50"
+            title="Resend direct notification email to blood bank"
+          >
+            <Send className="w-3 h-3 text-blue-400" />
+            <span>{isResendingEmail ? "Queueing..." : "Resend Email"}</span>
+          </button>
+        </div>
+      </div>
+
+      {emailStatusText && (
+        <div className="mb-4 p-2.5 rounded-xl bg-emerald-950/60 border border-emerald-700 text-xs text-emerald-300 flex items-center gap-2 animate-in fade-in">
+          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+          <span>{emailStatusText}</span>
+        </div>
+      )}
 
       {/* Victim & Emergency Contact Information */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">

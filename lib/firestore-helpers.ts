@@ -506,9 +506,216 @@ export async function getAllBloodBanks(): Promise<BloodBankDocument[]> {
 }
 
 /**
- * Pushes a test accident into Firestore for live testing
+ * Queues an emergency priority alert email to a blood bank in the Firestore `/mail` collection
+ * (Fully compatible with Firebase Trigger Email extension and SMTP dispatchers).
+ * Completely replaces audible siren alerts with high-priority email notifications.
  */
-export async function pushTestAccident(data?: Partial<AccidentDocument>) {
+export async function queueEmergencyAlertEmail(params: {
+  to: string;
+  bankName?: string;
+  victimName?: string;
+  bloodGroup: string;
+  locationAddress?: string;
+  latitude?: number;
+  longitude?: number;
+  distanceKm?: number | null;
+  impactGForce?: number;
+  reportId?: string;
+  accidentId?: string;
+}) {
+  const {
+    to,
+    bankName = "Emergency Blood Bank Desk",
+    victimName = "Accident Victim",
+    bloodGroup,
+    locationAddress = "Live GPS Latch",
+    latitude = 28.6139,
+    longitude = 77.209,
+    distanceKm = null,
+    impactGForce = 5.2,
+    reportId = "",
+    accidentId = "",
+  } = params;
+
+  if (!to) {
+    console.warn("queueEmergencyAlertEmail: No recipient email provided.");
+    return { success: false, error: "Missing recipient email" };
+  }
+
+  const mapsUrl = `https://maps.google.com/?q=${latitude},${longitude}`;
+  const blackboxUrl = reportId
+    ? `https://accialert-website.vercel.app/blackbox-portal?reportId=${reportId}`
+    : `https://accialert-website.vercel.app/blood-banks/dashboard`;
+
+  const subject = `🚨 URGENT: Blood Supply Alert [${bloodGroup} Required] - AcciAlert Hema-Link`;
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${subject}</title>
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #0b0f19; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f3f4f6;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0b0f19; padding: 24px 12px;">
+          <tr>
+            <td align="center">
+              <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #111827; border: 1px solid #ef4444; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(239, 68, 68, 0.2);">
+                <!-- Header Banner -->
+                <tr>
+                  <td style="background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%); padding: 24px 24px; text-align: left;">
+                    <span style="background-color: #450a0a; color: #fecaca; font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; border: 1px solid #7f1d1d;">
+                      Silent Priority Dispatch • Sirens Suppressed
+                    </span>
+                    <h1 style="color: #ffffff; font-size: 22px; font-weight: 900; margin: 12px 0 4px 0; text-transform: uppercase; letter-spacing: 0.5px;">
+                      🚨 Emergency Blood Alert
+                    </h1>
+                    <p style="color: #fee2e2; font-size: 13px; margin: 0; line-height: 1.4;">
+                      High-impact collision detected near ${bankName}. Immediate blood preparation requested.
+                    </p>
+                  </td>
+                </tr>
+
+                <!-- Content Area -->
+                <tr>
+                  <td style="padding: 24px;">
+                    <!-- Required Blood Group Callout -->
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #1f2937; border: 1px solid #374151; border-radius: 12px; margin-bottom: 20px;">
+                      <tr>
+                        <td style="padding: 16px; text-align: left;">
+                          <span style="font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; display: block; letter-spacing: 1px;">
+                            Required Blood Group
+                          </span>
+                          <div style="font-size: 32px; font-weight: 900; color: #ef4444; margin-top: 4px;">
+                            ${bloodGroup}
+                          </div>
+                          <span style="font-size: 12px; color: #f87171; font-weight: 600;">
+                            Priority Transfusion Protocol Active
+                          </span>
+                        </td>
+                        <td align="right" style="padding: 16px;">
+                          ${
+                            distanceKm !== null
+                              ? `<span style="background-color: #064e3b; color: #6ee7b7; border: 1px solid #059669; font-size: 12px; font-weight: bold; padding: 6px 12px; border-radius: 8px;">~${distanceKm} km away</span>`
+                              : ""
+                          }
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Crash Telemetry Details -->
+                    <table width="100%" cellpadding="8" cellspacing="0" style="font-size: 13px; border-collapse: collapse; margin-bottom: 24px;">
+                      <tr style="border-bottom: 1px solid #1f2937;">
+                        <td style="color: #9ca3af; font-weight: 600; width: 40%;">Victim Profile:</td>
+                        <td style="color: #ffffff; font-weight: bold;">${victimName}</td>
+                      </tr>
+                      <tr style="border-bottom: 1px solid #1f2937;">
+                        <td style="color: #9ca3af; font-weight: 600;">Location Coordinates:</td>
+                        <td style="color: #ffffff; font-family: monospace;">${latitude.toFixed(4)}, ${longitude.toFixed(4)}</td>
+                      </tr>
+                      <tr style="border-bottom: 1px solid #1f2937;">
+                        <td style="color: #9ca3af; font-weight: 600;">Address Landmark:</td>
+                        <td style="color: #e5e7eb;">${locationAddress}</td>
+                      </tr>
+                      <tr style="border-bottom: 1px solid #1f2937;">
+                        <td style="color: #9ca3af; font-weight: 600;">Impact Severity:</td>
+                        <td style="color: #f87171; font-weight: bold;">${impactGForce > 0 ? `${impactGForce} G-Force (Severe Collision)` : "Severe Crash Detected"}</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #9ca3af; font-weight: 600;">Dispatch Channel:</td>
+                        <td style="color: #38bdf8; font-weight: 600;">AcciAlert Hema-Link Direct Mail</td>
+                      </tr>
+                    </table>
+
+                    <!-- Action Buttons -->
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding-bottom: 12px;">
+                          <a href="${mapsUrl}" target="_blank" style="display: block; text-align: center; background-color: #dc2626; color: #ffffff; font-size: 14px; font-weight: bold; text-decoration: none; padding: 14px 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);">
+                            📍 Open GPS Coordinates in Google Maps
+                          </a>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <a href="${blackboxUrl}" target="_blank" style="display: block; text-align: center; background-color: #1f2937; color: #38bdf8; font-size: 13px; font-weight: 600; text-decoration: none; padding: 12px 20px; border-radius: 10px; border: 1px solid #38bdf8;">
+                            📋 View Digital Blackbox Report & Telemetry
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                  <td style="background-color: #0b0f19; padding: 16px 24px; border-top: 1px solid #1f2937; text-align: center;">
+                    <p style="color: #6b7280; font-size: 11px; margin: 0; line-height: 1.5;">
+                      This emergency notification was generated automatically by AcciAlert Edge ML v6.0.<br>
+                      Audible sirens on your monitoring terminal have been suppressed per hospital quiet protocol.<br>
+                      Recipient Facility: <strong>${to}</strong>
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+    </html>
+  `;
+
+  const textContent = `
+EMERGENCY BLOOD ALERT - ACCIALERT HEMA-LINK
+Patient Blood Group: ${bloodGroup}
+Facility: ${bankName}
+Victim: ${victimName}
+Location: ${locationAddress} (${latitude.toFixed(4)}, ${longitude.toFixed(4)})
+Distance: ${distanceKm !== null ? `${distanceKm} km` : "Proximity Zone"}
+Impact Severity: ${impactGForce} G
+
+Google Maps: ${mapsUrl}
+Blackbox Report: ${blackboxUrl}
+
+(Audible sirens suppressed. Priority email dispatched directly to ${to})
+  `.trim();
+
+  try {
+    const mailDocRef = await addDoc(collection(db, "mail"), {
+      to,
+      message: {
+        subject,
+        text: textContent,
+        html: htmlContent,
+      },
+      metadata: {
+        bloodGroup,
+        accidentId,
+        reportId,
+        dispatchedAt: serverTimestamp(),
+        source: "hema-link-direct",
+      },
+      createdAt: serverTimestamp(),
+    });
+
+    return { success: true, mailId: mailDocRef.id };
+  } catch (err: any) {
+    console.error("Failed to queue emergency email in /mail:", err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Pushes a test accident into Firestore for live testing
+ * and automatically dispatches an emergency email notification
+ * to the blood bank instead of sounding audible sirens.
+ */
+export async function pushTestAccident(
+  data?: Partial<AccidentDocument>,
+  targetBankEmail?: string,
+  targetBankName?: string
+) {
   const sampleAccidents: Partial<AccidentDocument>[] = [
     {
       userId: "victim-live-01",
@@ -564,8 +771,33 @@ export async function pushTestAccident(data?: Partial<AccidentDocument>) {
       ...selected,
       createdAt: serverTimestamp(),
       status: "ACTIVE",
+      sirenDisabled: true,
+      emailDispatched: Boolean(targetBankEmail),
+      recipientEmail: targetBankEmail || null,
     });
-    return { success: true, id: docRef.id };
+
+    // Directly queue emergency email for silent notification to blood bank
+    let emailResult = null;
+    if (targetBankEmail) {
+      emailResult = await queueEmergencyAlertEmail({
+        to: targetBankEmail,
+        bankName: targetBankName || "Verified Blood Bank",
+        victimName: selected.userName,
+        bloodGroup: selected.bloodGroup || "O+",
+        locationAddress: selected.location?.address,
+        latitude: selected.location?.latitude,
+        longitude: selected.location?.longitude,
+        impactGForce: selected.gForce,
+        accidentId: docRef.id,
+      });
+    }
+
+    return {
+      success: true,
+      id: docRef.id,
+      emailDispatched: Boolean(emailResult?.success),
+      mailId: emailResult?.mailId,
+    };
   } catch (err: any) {
     console.error("Error creating test accident:", err);
     return { success: false, error: err.message };
