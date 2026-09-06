@@ -11,6 +11,7 @@ import {
   limit,
   serverTimestamp,
   onSnapshot,
+  deleteDoc,
 } from "firebase/firestore";
 import { db } from "./firebase";
 import {
@@ -870,5 +871,244 @@ export async function pushTestAccident(
   } catch (err: any) {
     console.error("Error creating test accident:", err);
     return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Admin: Permanently deletes a blood bank from both collections
+ */
+export async function deleteBloodBankDoc(bankId: string) {
+  try {
+    await Promise.allSettled([
+      deleteDoc(doc(db, "bloodBanks", bankId)),
+      deleteDoc(doc(db, "blood_banks", bankId)),
+    ]);
+    return { success: true };
+  } catch (err: any) {
+    console.error("Failed to delete blood bank:", err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Admin: Fetches all registered user emergency profiles
+ */
+export async function getAllUsers(): Promise<UserDocument[]> {
+  try {
+    const snap = await getDocs(collection(db, "users"));
+    const list: UserDocument[] = [];
+    snap.forEach((d) => {
+      const data = d.data();
+      list.push({
+        id: d.id,
+        primaryContact: data.primaryContact || { name: "Not configured", phone: "" },
+        profile: data.profile || {
+          name: data.name || "Anonymous User",
+          bloodGroup: data.bloodGroup || "Unknown",
+          allergies: data.allergies || "None recorded",
+          medicalConditions: data.medicalConditions || "None",
+          medications: data.medications || "None",
+          additionalNotes: data.additionalNotes || "",
+        },
+        createdAt: data.createdAt || data.updatedAt,
+      });
+    });
+    return list;
+  } catch (err) {
+    console.warn("Failed to fetch users from Firestore:", err);
+    return [];
+  }
+}
+
+/**
+ * Admin: Permanently deletes a user document
+ */
+export async function deleteUserDoc(userId: string) {
+  try {
+    await deleteDoc(doc(db, "users", userId));
+    return { success: true };
+  } catch (err: any) {
+    console.error("Failed to delete user doc:", err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Admin: Fetches all accident / dispatch incidents
+ */
+export async function getAllAccidents(): Promise<AccidentDocument[]> {
+  try {
+    let list: AccidentDocument[] = [];
+    try {
+      const q = query(collection(db, "accidents"), orderBy("createdAt", "desc"), limit(100));
+      const snap = await getDocs(q);
+      snap.forEach((d) => list.push({ id: d.id, ...(d.data() as AccidentDocument) }));
+    } catch {
+      const snap = await getDocs(collection(db, "accidents"));
+      snap.forEach((d) => list.push({ id: d.id, ...(d.data() as AccidentDocument) }));
+    }
+    return list;
+  } catch (err) {
+    console.warn("Failed to fetch accidents:", err);
+    return [];
+  }
+}
+
+/**
+ * Admin: Resolves an active incident
+ */
+export async function resolveAccident(accidentId: string) {
+  try {
+    const updateData = {
+      status: "RESOLVED",
+      resolvedAt: serverTimestamp(),
+    };
+    await Promise.allSettled([
+      setDoc(doc(db, "accidents", accidentId), updateData, { merge: true }),
+      setDoc(doc(db, "emergency_dispatches", accidentId), updateData, { merge: true }),
+    ]);
+    return { success: true };
+  } catch (err: any) {
+    console.error("Failed to resolve accident:", err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Admin: Permanently deletes an accident
+ */
+export async function deleteAccident(accidentId: string) {
+  try {
+    await Promise.allSettled([
+      deleteDoc(doc(db, "accidents", accidentId)),
+      deleteDoc(doc(db, "emergency_dispatches", accidentId)),
+    ]);
+    return { success: true };
+  } catch (err: any) {
+    console.error("Failed to delete accident:", err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Admin: Fetches all cryptographic Blackbox reports
+ */
+export async function getAllReports(): Promise<ReportDocument[]> {
+  try {
+    const snap = await getDocs(collection(db, "reports"));
+    const list: ReportDocument[] = [];
+    snap.forEach((d) => {
+      list.push({ id: d.id, ...(d.data() as ReportDocument) });
+    });
+    return list;
+  } catch (err) {
+    console.warn("Failed to fetch reports:", err);
+    return [];
+  }
+}
+
+/**
+ * Admin: Deletes a blackbox report certificate
+ */
+export async function deleteReportDoc(reportId: string) {
+  try {
+    await deleteDoc(doc(db, "reports", reportId));
+    return { success: true };
+  } catch (err: any) {
+    console.error("Failed to delete report:", err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Admin: Purges all test and demo accidents from the database
+ */
+export async function purgeTestAccidents() {
+  try {
+    const snap = await getDocs(collection(db, "accidents"));
+    let deletedCount = 0;
+    const promises: Promise<any>[] = [];
+    snap.forEach((d) => {
+      const data = d.data();
+      const isTest =
+        data.userName === "Karan Johar" ||
+        data.userName === "Rohan Varma" ||
+        data.userName === "Sneha Reddy" ||
+        data.userName?.includes("Test") ||
+        data.userName?.includes("Demo") ||
+        data.userId?.startsWith("victim-live");
+      if (isTest) {
+        deletedCount++;
+        promises.push(deleteDoc(doc(db, "accidents", d.id)));
+        promises.push(deleteDoc(doc(db, "emergency_dispatches", d.id)));
+      }
+    });
+    await Promise.allSettled(promises);
+    return { success: true, count: deletedCount };
+  } catch (err: any) {
+    console.error("Failed to purge test accidents:", err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Admin: Fetches live high-level overview metrics across the entire Firestore ecosystem
+ */
+export async function getDatabaseOverviewStats() {
+  try {
+    const [usersSnap, banksSnap, accidentsSnap, reportsSnap, mailSnap] = await Promise.allSettled([
+      getDocs(collection(db, "users")),
+      getDocs(collection(db, "bloodBanks")),
+      getDocs(collection(db, "accidents")),
+      getDocs(collection(db, "reports")),
+      getDocs(collection(db, "mail")),
+    ]);
+
+    const usersCount = usersSnap.status === "fulfilled" ? usersSnap.value.size : 0;
+    const banksCount = banksSnap.status === "fulfilled" ? banksSnap.value.size : 0;
+    
+    let pendingBanks = 0;
+    let approvedBanks = 0;
+    if (banksSnap.status === "fulfilled") {
+      banksSnap.value.forEach((d) => {
+        const s = d.data().status;
+        if (s === "pending") pendingBanks++;
+        else if (s === "approved") approvedBanks++;
+      });
+    }
+
+    const accidentsCount = accidentsSnap.status === "fulfilled" ? accidentsSnap.value.size : 0;
+    let activeAccidents = 0;
+    if (accidentsSnap.status === "fulfilled") {
+      accidentsSnap.value.forEach((d) => {
+        if (d.data().status === "ACTIVE") activeAccidents++;
+      });
+    }
+
+    const reportsCount = reportsSnap.status === "fulfilled" ? reportsSnap.value.size : 0;
+    const mailCount = mailSnap.status === "fulfilled" ? mailSnap.value.size : 0;
+
+    return {
+      usersCount,
+      banksCount,
+      pendingBanks,
+      approvedBanks,
+      accidentsCount,
+      activeAccidents,
+      reportsCount,
+      mailCount,
+    };
+  } catch (err) {
+    console.warn("Failed to get database stats:", err);
+    return {
+      usersCount: 0,
+      banksCount: 0,
+      pendingBanks: 0,
+      approvedBanks: 0,
+      accidentsCount: 0,
+      activeAccidents: 0,
+      reportsCount: 0,
+      mailCount: 0,
+    };
   }
 }
