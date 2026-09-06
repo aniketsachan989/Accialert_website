@@ -18,10 +18,6 @@ AcciAlert is an autonomous road safety and post-crash trauma mitigation platform
 - Full sensor telemetry: impact G-force, pre-crash speed, rollover status, and weather conditions.
 - Strict audit logging via `/accessLogs` collection.
 
-### 3. Healthcare Administration (`/admin/blood-banks`)
-- Verification gate for blood bank registrations.
-- State medical license audit and approval workflow.
-
 ---
 
 ## Environment Configuration

@@ -83,8 +83,9 @@ export default function AdminBloodBanksPage() {
 
   const handleAdminAuth = (e: React.FormEvent) => {
     e.preventDefault();
-    // Admin access gate (default admin passcode or demo code)
-    if (passcode.trim() === "accialert-admin" || passcode.trim() === "admin2026" || passcode.trim() === "123456") {
+    // Admin access gate: private master authorization
+    const validCodes = ["aniket989", "accialert@master", "aniket-master-2026"];
+    if (validCodes.includes(passcode.trim())) {
       setIsAuthenticated(true);
       setPasscodeError("");
       loadBloodBanks();

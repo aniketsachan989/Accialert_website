@@ -1,10 +1,39 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { ShieldAlert, Heart, Phone, ExternalLink, Activity, Droplet, FileSpreadsheet, Lock } from "lucide-react";
 
 export default function Footer() {
+  const router = useRouter();
+  const [tapCount, setTapCount] = useState(0);
+
+  // Global secret shortcut: Ctrl + Shift + A (or Cmd + Shift + A)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === "A" || e.key === "a")) {
+        e.preventDefault();
+        router.push("/admin/blood-banks");
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [router]);
+
+  // Secret Easter Egg: Tapping copyright branding 5 times secretly opens admin portal
+  const handleSecretTap = () => {
+    setTapCount((prev) => {
+      const next = prev + 1;
+      if (next >= 5) {
+        router.push("/admin/blood-banks");
+        return 0;
+      }
+      return next;
+    });
+    setTimeout(() => setTapCount(0), 3000);
+  };
   return (
     <footer className="bg-[#080B12] border-t border-slate-800 text-slate-400 text-xs py-12 lg:py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -119,11 +148,6 @@ export default function Footer() {
                   <FileSpreadsheet className="w-3.5 h-3.5 text-cyan-400" /> Digital Blackbox Portal
                 </Link>
               </li>
-              <li>
-                <Link href="/admin/blood-banks" className="hover:text-white transition-colors flex items-center gap-1.5 text-slate-500 hover:text-slate-400 text-[11px]">
-                  <span>• License Admin Review</span>
-                </Link>
-              </li>
             </ul>
           </div>
 
@@ -149,7 +173,10 @@ export default function Footer() {
 
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-slate-400 text-[11px]">
-          <div>
+          <div
+            onClick={handleSecretTap}
+            className="cursor-default select-none transition-colors"
+          >
             © {new Date().getFullYear()} Aniket DevStudio. All rights reserved.
           </div>
           <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-[11px]">
