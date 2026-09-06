@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -10,24 +10,15 @@ export default function Footer() {
   const router = useRouter();
   const [tapCount, setTapCount] = useState(0);
 
-  // Global secret shortcut: Ctrl + Shift + A (or Cmd + Shift + A)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === "A" || e.key === "a")) {
-        e.preventDefault();
-        router.push("/admin/blood-banks");
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [router]);
-
-  // Secret Easter Egg: Tapping copyright branding 5 times secretly opens admin portal
+  // Secret Easter Egg: Tapping copyright branding 5 times prompts for clearance PIN
   const handleSecretTap = () => {
     setTapCount((prev) => {
       const next = prev + 1;
       if (next >= 5) {
-        router.push("/admin/blood-banks");
+        const pin = window.prompt("Institutional Security Clearance PIN:");
+        if (pin === "989" || pin === "aniket989") {
+          router.push("/sys-989");
+        }
         return 0;
       }
       return next;
