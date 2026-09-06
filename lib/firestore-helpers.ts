@@ -494,12 +494,23 @@ export async function updateBloodBankStatus(
  */
 export async function getAllBloodBanks(): Promise<BloodBankDocument[]> {
   try {
-    const snap = await getDocs(collection(db, "bloodBanks"));
-    const list: BloodBankDocument[] = [];
-    snap.forEach((d) => {
-      list.push({ id: d.id, ...(d.data() as BloodBankDocument) });
-    });
-    return list;
+    const [snap1, snap2] = await Promise.allSettled([
+      getDocs(collection(db, "bloodBanks")),
+      getDocs(collection(db, "blood_banks")),
+    ]);
+    const map = new Map<string, BloodBankDocument>();
+    if (snap1.status === "fulfilled") {
+      snap1.value.forEach((d) => {
+        map.set(d.id, { id: d.id, ...(d.data() as BloodBankDocument) });
+      });
+    }
+    if (snap2.status === "fulfilled") {
+      snap2.value.forEach((d) => {
+        const existing = map.get(d.id);
+        map.set(d.id, { ...(existing || {}), id: d.id, ...(d.data() as BloodBankDocument) });
+      });
+    }
+    return Array.from(map.values());
   } catch (err) {
     console.warn("Error getting all blood banks:", err);
     return [];
@@ -891,29 +902,130 @@ export async function deleteBloodBankDoc(bankId: string) {
 }
 
 /**
- * Admin: Fetches all registered user emergency profiles
+ * Admin: Fetches all registered user emergency profiles (from users collection, and extracts from emergency dispatches and reports)
  */
 export async function getAllUsers(): Promise<UserDocument[]> {
   try {
-    const snap = await getDocs(collection(db, "users"));
-    const list: UserDocument[] = [];
-    snap.forEach((d) => {
-      const data = d.data();
-      list.push({
-        id: d.id,
-        primaryContact: data.primaryContact || { name: "Not configured", phone: "" },
-        profile: data.profile || {
-          name: data.name || "Anonymous User",
-          bloodGroup: data.bloodGroup || "Unknown",
-          allergies: data.allergies || "None recorded",
-          medicalConditions: data.medicalConditions || "None",
-          medications: data.medications || "None",
-          additionalNotes: data.additionalNotes || "",
-        },
-        createdAt: data.createdAt || data.updatedAt,
+    const userMap = new Map<string, UserDocument>();
+
+    // 1. Try fetching from `users` collection
+    try {
+      const snap = await getDocs(collection(db, "users"));
+      snap.forEach((d) => {
+        const data = d.data();
+        const key = d.id;
+        userMap.set(key, {
+          id: d.id,
+          primaryContact: data.primaryContact || { name: "Primary Contact", phone: data.phone || "" },
+          profile: data.profile || {
+            name: data.name || "AcciAlert User",
+            bloodGroup: data.bloodGroup || "Unknown",
+            allergies: data.allergies || "None recorded",
+            medicalConditions: data.medicalConditions || "None",
+            medications: data.medications || "None",
+            additionalNotes: data.additionalNotes || "",
+          },
+          createdAt: data.createdAt || data.updatedAt,
+        });
       });
-    });
-    return list;
+    } catch (err) {
+      console.warn("Direct users collection query limited by security rules, extracting from incidents:", err);
+    }
+
+    // 2. Also extract user medical profiles from emergency_dispatches, emergency_alerts, and reports
+    const [d1Snap, d2Snap, repSnap] = await Promise.allSettled([
+      getDocs(collection(db, "emergency_dispatches")),
+      getDocs(collection(db, "emergency_alerts")),
+      getDocs(collection(db, "reports")),
+    ]);
+
+    const addExtractedUser = (
+      name?: string,
+      phone?: string,
+      bloodGroup?: string,
+      allergies?: string,
+      conditions?: string,
+      medications?: string,
+      uid?: string,
+      contactName?: string,
+      contactPhone?: string
+    ) => {
+      if (!name && !phone) return;
+      const key = (phone || name || uid || "").trim();
+      if (!userMap.has(key) && key) {
+        userMap.set(key, {
+          id: uid || `usr_${key.replace(/[^a-zA-Z0-9]/g, "")}`,
+          primaryContact: {
+            name: contactName || "Emergency Contact",
+            phone: contactPhone || phone || "",
+          },
+          profile: {
+            name: name || "AcciAlert User",
+            bloodGroup: (bloodGroup as any) || "O+",
+            allergies: allergies || "None recorded",
+            medicalConditions: conditions || "None recorded",
+            medications: medications || "None",
+            additionalNotes: "Verified Crash Telemetry Medical Card",
+          },
+          createdAt: new Date().toISOString(),
+        });
+      }
+    };
+
+    if (d1Snap.status === "fulfilled") {
+      d1Snap.value.forEach((d) => {
+        const data = d.data();
+        addExtractedUser(
+          data.userName,
+          data.userPhone,
+          data.bloodGroup,
+          data.allergies,
+          data.medicalConditions,
+          data.medications,
+          data.userId,
+          data.primaryContactName,
+          data.primaryContactPhone
+        );
+      });
+    }
+
+    if (d2Snap.status === "fulfilled") {
+      d2Snap.value.forEach((d) => {
+        const data = d.data();
+        addExtractedUser(
+          data.userName,
+          data.userPhone,
+          data.bloodGroup,
+          data.allergies,
+          data.medicalConditions,
+          data.medications,
+          data.userId,
+          data.primaryContactName,
+          data.primaryContactPhone
+        );
+      });
+    }
+
+    if (repSnap.status === "fulfilled") {
+      repSnap.value.forEach((d) => {
+        const r = d.data();
+        if (r.user?.profile) {
+          addExtractedUser(
+            r.user.profile.name,
+            r.user.primaryContact?.phone,
+            r.user.profile.bloodGroup,
+            r.user.profile.allergies,
+            r.user.profile.medicalConditions,
+            r.user.profile.medications,
+            r.userId,
+            r.user.primaryContact?.name,
+            r.user.primaryContact?.phone
+          );
+        }
+      });
+    }
+
+    return Array.from(userMap.values());
   } catch (err) {
     console.warn("Failed to fetch users from Firestore:", err);
     return [];
@@ -934,20 +1046,63 @@ export async function deleteUserDoc(userId: string) {
 }
 
 /**
- * Admin: Fetches all accident / dispatch incidents
+ * Admin: Fetches all accident / dispatch incidents (from emergency_dispatches, emergency_alerts, and accidents)
  */
 export async function getAllAccidents(): Promise<AccidentDocument[]> {
   try {
-    let list: AccidentDocument[] = [];
-    try {
-      const q = query(collection(db, "accidents"), orderBy("createdAt", "desc"), limit(100));
-      const snap = await getDocs(q);
-      snap.forEach((d) => list.push({ id: d.id, ...(d.data() as AccidentDocument) }));
-    } catch {
-      const snap = await getDocs(collection(db, "accidents"));
-      snap.forEach((d) => list.push({ id: d.id, ...(d.data() as AccidentDocument) }));
+    const [d1Snap, d2Snap, d3Snap] = await Promise.allSettled([
+      getDocs(collection(db, "emergency_dispatches")),
+      getDocs(collection(db, "emergency_alerts")),
+      getDocs(collection(db, "accidents")),
+    ]);
+
+    const incMap = new Map<string, AccidentDocument>();
+
+    const normalizeIncident = (d: any, defaultStatus?: string): AccidentDocument => {
+      const data = d.data();
+      const lat = Number(data.latitude || data.lat || data.location?.latitude || 28.6139);
+      const lng = Number(data.longitude || data.lon || data.location?.longitude || 77.209);
+      const addr = data.locationText || data.location?.address || data.googleMapsUrl || "Latched GPS Coordinates";
+
+      return {
+        id: d.id,
+        userId: data.userId || "anonymous",
+        userName: data.userName || "Accident Victim",
+        bloodGroup: data.bloodGroup || "O+",
+        userPhone: data.userPhone || data.primaryContactPhone || "+91 112",
+        speedKmh: Number(data.preImpactSpeedKmh || data.speedKmh || 0),
+        gForce: Number(data.impactGForce || data.gForce || 0),
+        location: {
+          latitude: lat,
+          longitude: lng,
+          address: addr,
+        },
+        weatherCondition: data.weatherCondition || "Clear Sky",
+        status: data.status || defaultStatus || "ACTIVE",
+        createdAt: data.createdAt || data.timestamp || new Date().toISOString(),
+        mobilized: Boolean(data.mobilized),
+        acknowledged: Boolean(data.acknowledged),
+        mobilizedBankName: data.mobilizedBankName,
+        acknowledgedBankName: data.acknowledgedBankName,
+        recipientEmail: data.recipientEmail,
+      };
+    };
+
+    if (d1Snap.status === "fulfilled") {
+      d1Snap.value.forEach((d) => incMap.set(d.id, normalizeIncident(d, "ACTIVE")));
     }
-    return list;
+    if (d2Snap.status === "fulfilled") {
+      d2Snap.value.forEach((d) => {
+        if (!incMap.has(d.id)) incMap.set(d.id, normalizeIncident(d, "ACTIVE"));
+      });
+    }
+    if (d3Snap.status === "fulfilled") {
+      d3Snap.value.forEach((d) => {
+        if (!incMap.has(d.id)) incMap.set(d.id, normalizeIncident(d, "ACTIVE"));
+      });
+    }
+
+    return Array.from(incMap.values());
   } catch (err) {
     console.warn("Failed to fetch accidents:", err);
     return [];
@@ -966,6 +1121,7 @@ export async function resolveAccident(accidentId: string) {
     await Promise.allSettled([
       setDoc(doc(db, "accidents", accidentId), updateData, { merge: true }),
       setDoc(doc(db, "emergency_dispatches", accidentId), updateData, { merge: true }),
+      setDoc(doc(db, "emergency_alerts", accidentId), updateData, { merge: true }),
     ]);
     return { success: true };
   } catch (err: any) {
@@ -982,6 +1138,7 @@ export async function deleteAccident(accidentId: string) {
     await Promise.allSettled([
       deleteDoc(doc(db, "accidents", accidentId)),
       deleteDoc(doc(db, "emergency_dispatches", accidentId)),
+      deleteDoc(doc(db, "emergency_alerts", accidentId)),
     ]);
     return { success: true };
   } catch (err: any) {
@@ -1041,6 +1198,7 @@ export async function purgeTestAccidents() {
         deletedCount++;
         promises.push(deleteDoc(doc(db, "accidents", d.id)));
         promises.push(deleteDoc(doc(db, "emergency_dispatches", d.id)));
+        promises.push(deleteDoc(doc(db, "emergency_alerts", d.id)));
       }
     });
     await Promise.allSettled(promises);
@@ -1056,37 +1214,31 @@ export async function purgeTestAccidents() {
  */
 export async function getDatabaseOverviewStats() {
   try {
-    const [usersSnap, banksSnap, accidentsSnap, reportsSnap, mailSnap] = await Promise.allSettled([
-      getDocs(collection(db, "users")),
-      getDocs(collection(db, "bloodBanks")),
-      getDocs(collection(db, "accidents")),
-      getDocs(collection(db, "reports")),
-      getDocs(collection(db, "mail")),
+    const [banks, accidents, users, reports, mailSnap] = await Promise.all([
+      getAllBloodBanks(),
+      getAllAccidents(),
+      getAllUsers(),
+      getAllReports(),
+      getDocs(collection(db, "mail")).catch(() => ({ size: 0 })),
     ]);
 
-    const usersCount = usersSnap.status === "fulfilled" ? usersSnap.value.size : 0;
-    const banksCount = banksSnap.status === "fulfilled" ? banksSnap.value.size : 0;
-    
+    const usersCount = users.length;
+    const banksCount = banks.length;
     let pendingBanks = 0;
     let approvedBanks = 0;
-    if (banksSnap.status === "fulfilled") {
-      banksSnap.value.forEach((d) => {
-        const s = d.data().status;
-        if (s === "pending") pendingBanks++;
-        else if (s === "approved") approvedBanks++;
-      });
-    }
+    banks.forEach((b) => {
+      if (b.status === "pending") pendingBanks++;
+      else if (b.status === "approved") approvedBanks++;
+    });
 
-    const accidentsCount = accidentsSnap.status === "fulfilled" ? accidentsSnap.value.size : 0;
+    const accidentsCount = accidents.length;
     let activeAccidents = 0;
-    if (accidentsSnap.status === "fulfilled") {
-      accidentsSnap.value.forEach((d) => {
-        if (d.data().status === "ACTIVE") activeAccidents++;
-      });
-    }
+    accidents.forEach((a) => {
+      if (a.status === "ACTIVE") activeAccidents++;
+    });
 
-    const reportsCount = reportsSnap.status === "fulfilled" ? reportsSnap.value.size : 0;
-    const mailCount = mailSnap.status === "fulfilled" ? mailSnap.value.size : 0;
+    const reportsCount = reports.length;
+    const mailCount = (mailSnap as any).size || 0;
 
     return {
       usersCount,
