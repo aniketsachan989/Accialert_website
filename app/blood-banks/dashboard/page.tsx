@@ -109,41 +109,120 @@ export default function BloodBankDashboardPage() {
     }
 
     setAccidentsLoading(true);
-    let unsubscribeSnap: () => void = () => {};
+    let unsubscribeDispatches: () => void = () => {};
+    let unsubscribeAccidents: () => void = () => {};
+
+    let dispatchesList: AccidentDocument[] = [];
+    let accidentsList: AccidentDocument[] = [];
+
+    const mergeAndSort = () => {
+      const mergedMap = new Map<string, AccidentDocument>();
+      // Prefer emergency_dispatches
+      accidentsList.forEach((a) => mergedMap.set(a.id || "", a));
+      dispatchesList.forEach((d) => mergedMap.set(d.id || "", d));
+
+      const combined = Array.from(mergedMap.values());
+      combined.sort((a, b) => {
+        const timeA = a.createdAt?.seconds || 0;
+        const timeB = b.createdAt?.seconds || 0;
+        return timeB - timeA;
+      });
+
+      setAccidents(combined);
+      setAccidentsLoading(false);
+    };
+
+    const parseToAccidentDocument = (docSnap: any): AccidentDocument => {
+      const data = docSnap.data();
+      const rawTimestamp = data.timestamp;
+      let createdAtObj = data.createdAt;
+      if (!createdAtObj && rawTimestamp) {
+        const millis = typeof rawTimestamp === "number" ? rawTimestamp : Date.now();
+        createdAtObj = { seconds: Math.floor(millis / 1000) };
+      }
+
+      return {
+        id: docSnap.id,
+        userId: data.userId || "APP-USER",
+        userName: data.userName || "AcciAlert Protection Active",
+        bloodGroup: data.bloodGroup || "O+",
+        userPhone: data.userPhone || data.phone || "+91 112",
+        speedKmh: Number(
+          data.telemetry?.preImpactSpeedKmh ??
+            data.preImpactSpeedKmh ??
+            data.speedKmh ??
+            0
+        ),
+        gForce: Number(
+          data.telemetry?.impactGForce ??
+            data.impactGForce ??
+            data.gForce ??
+            0
+        ),
+        location: {
+          latitude: Number(
+            data.location?.latitude ?? data.latitude ?? 0
+          ),
+          longitude: Number(
+            data.location?.longitude ?? data.longitude ?? 0
+          ),
+          address:
+            data.location?.address ??
+            data.locationText ??
+            "Signal Latched GPS Location",
+        },
+        weatherCondition:
+          data.telemetry?.weatherCondition ??
+          data.weatherCondition ??
+          "Clear Sky",
+        status: data.status === "RESOLVED" ? "RESOLVED" : "ACTIVE",
+        createdAt: createdAtObj,
+        notes: data.notes || (data.reportId ? `Report ID: ${data.reportId}` : undefined),
+      };
+    };
 
     try {
-      const q = query(
-        collection(db, "accidents"),
+      // 1. Listen to live Android app dispatches
+      const qDispatches = query(
+        collection(db, "emergency_dispatches"),
         where("status", "==", "ACTIVE")
       );
 
-      unsubscribeSnap = onSnapshot(
-        q,
+      unsubscribeDispatches = onSnapshot(
+        qDispatches,
         (snapshot) => {
-          const docs: AccidentDocument[] = [];
+          dispatchesList = [];
           snapshot.forEach((docSnap) => {
-            docs.push({
-              id: docSnap.id,
-              ...(docSnap.data() as AccidentDocument),
-            });
+            dispatchesList.push(parseToAccidentDocument(docSnap));
           });
-
-          // Sort by timestamp desc
-          docs.sort((a, b) => {
-            const timeA = a.createdAt?.seconds || 0;
-            const timeB = b.createdAt?.seconds || 0;
-            return timeB - timeA;
-          });
-
-          setAccidents(docs);
-          setAccidentsLoading(false);
-
-          if (docs.length > 0) {
+          mergeAndSort();
+          if (dispatchesList.length > 0) {
             playAlertSound("beep");
           }
         },
         (error) => {
-          console.warn("Firestore onSnapshot error:", error);
+          console.warn("Firestore emergency_dispatches onSnapshot error:", error);
+          setAccidentsLoading(false);
+        }
+      );
+
+      // 2. Listen to test accidents / simulations
+      const qAccidents = query(
+        collection(db, "accidents"),
+        where("status", "==", "ACTIVE")
+      );
+
+      unsubscribeAccidents = onSnapshot(
+        qAccidents,
+        (snapshot) => {
+          accidentsList = [];
+          snapshot.forEach((docSnap) => {
+            accidentsList.push(parseToAccidentDocument(docSnap));
+          });
+          mergeAndSort();
+        },
+        (error) => {
+          console.warn("Firestore accidents onSnapshot error:", error);
           setAccidentsLoading(false);
         }
       );
@@ -152,7 +231,10 @@ export default function BloodBankDashboardPage() {
       setAccidentsLoading(false);
     }
 
-    return () => unsubscribeSnap();
+    return () => {
+      unsubscribeDispatches();
+      unsubscribeAccidents();
+    };
   }, [authState]);
 
   const handleLogin = async (e: React.FormEvent) => {

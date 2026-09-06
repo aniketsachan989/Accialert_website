@@ -51,7 +51,7 @@ export default function HeroSection() {
                 AcciAlert Emergency Safety System
               </span>
               <span className="bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold text-[9px] sm:text-[10px] px-2 py-0.5 rounded-full shadow-sm shrink-0">
-                v5.0 Active
+                v6.0 Active
               </span>
             </div>
 
