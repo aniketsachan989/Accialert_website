@@ -14,7 +14,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL("https://accialert-website.vercel.app"),
   title: {
-    default: "AcciAlert | AI Zero-Delay Crash Detection & Emergency Response Network",
+    default: "AcciAlert — Saving Lives in Seconds",
     template: "%s | AcciAlert",
   },
   description:
@@ -51,13 +51,13 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: "https://accialert-website.vercel.app",
     siteName: "AcciAlert Safety Systems",
-    title: "AcciAlert | AI Zero-Delay Crash Detection & Emergency Response Network",
+    title: "AcciAlert — Saving Lives in Seconds",
     description:
       "AI-powered on-device edge crash detection, unblockable 20s lock screen medical ID overlay, real-time cloud telemetry, and 15km geohashed blood bank mobilization.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "AcciAlert | AI Zero-Delay Crash Detection & Emergency Response Network",
+    title: "AcciAlert — Saving Lives in Seconds",
     description:
       "AI-powered on-device edge crash detection, unblockable 20s lock screen medical ID overlay, and 15km geohashed blood bank mobilization.",
     creator: "@aniketsachan989",

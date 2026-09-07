@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "AcciAlert | AI Zero-Delay Crash Detection & Emergency Response Network";
+export const alt = "AcciAlert — Saving Lives in Seconds";
 export const size = {
   width: 1200,
   height: 630,
