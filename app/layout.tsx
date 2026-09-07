@@ -63,6 +63,18 @@ export const metadata: Metadata = {
     creator: "@aniketsachan989",
   },
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/logo.png" },
+      { url: "/logo.png", sizes: "32x32", type: "image/png" },
+      { url: "/logo.png", sizes: "16x16", type: "image/png" },
+    ],
+    shortcut: "/logo.png",
+    apple: [
+      { url: "/logo.png" },
+      { url: "/logo.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
   verification: {
     google: "google7a78c84f7086c22f.html",
   },
@@ -77,6 +89,9 @@ export default function RootLayout({
     <html lang="en" className="dark scroll-smooth overflow-x-hidden w-full max-w-full">
       <head>
         <JsonLd />
+        <link rel="icon" href="/logo.png" type="image/png" />
+        <link rel="shortcut icon" href="/logo.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/logo.png" />
       </head>
       <body className="min-h-screen w-full max-w-full bg-[#0B0F19] text-slate-100 antialiased selection:bg-red-500 selection:text-white flex flex-col justify-between overflow-x-hidden relative">
         <Navbar />
