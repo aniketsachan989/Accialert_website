@@ -173,10 +173,10 @@ export default function PrivacyPolicyPage() {
               <div>
                 <div className="text-xs text-slate-400 font-mono uppercase">Privacy &amp; Data Support</div>
                 <a
-                  href="mailto:accialert.help@gmail.com"
+                  href="mailto:aniketsachan989@gmail.com"
                   className="text-white font-mono font-bold hover:text-cyan-400 transition-colors"
                 >
-                  accialert.help@gmail.com
+                  aniketsachan989@gmail.com
                 </a>
               </div>
             </div>

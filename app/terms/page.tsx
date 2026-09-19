@@ -235,10 +235,10 @@ export default function TermsPage() {
                 <div>
                   <div className="text-xs text-slate-400 font-mono uppercase">Official Legal &amp; Compliance Channel</div>
                   <a
-                    href="mailto:accialert.help@gmail.com"
+                    href="mailto:aniketsachan989@gmail.com"
                     className="text-white font-mono font-bold hover:text-cyan-400 transition-colors"
                   >
-                    accialert.help@gmail.com
+                    aniketsachan989@gmail.com
                   </a>
                 </div>
               </div>

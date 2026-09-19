@@ -58,7 +58,7 @@ export default function ContactPage() {
       `Name: ${name}\nEmail: ${email}\nCategory: ${categoryLabel}\n\nMessage:\n${message}\n\n---\nSent via AcciAlert Web Contact Portal`
     );
 
-    const mailtoUrl = `mailto:accialert.help@gmail.com?subject=${subject}&body=${body}`;
+    const mailtoUrl = `mailto:aniketsachan989@gmail.com?subject=${subject}&body=${body}`;
     window.location.href = mailtoUrl;
     setSubmitted(true);
   };
@@ -99,15 +99,15 @@ export default function ContactPage() {
             <div>
               <div className="text-xs text-slate-400 font-mono uppercase">Direct Support Inbox</div>
               <a
-                href="mailto:accialert.help@gmail.com"
+                href="mailto:aniketsachan989@gmail.com"
                 className="text-sm sm:text-base font-mono font-bold text-white hover:text-cyan-400 transition-colors"
               >
-                accialert.help@gmail.com
+                aniketsachan989@gmail.com
               </a>
             </div>
           </div>
           <a
-            href="mailto:accialert.help@gmail.com"
+            href="mailto:aniketsachan989@gmail.com"
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-all shrink-0"
           >
             <span>Email Directly</span>
@@ -212,7 +212,7 @@ export default function ContactPage() {
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                 <span>
                   Your email client has been opened with your pre-filled inquiry. You can also write to us directly at{" "}
-                  <strong className="text-white font-mono">accialert.help@gmail.com</strong>.
+                  <strong className="text-white font-mono">aniketsachan989@gmail.com</strong>.
                 </span>
               </div>
             )}
